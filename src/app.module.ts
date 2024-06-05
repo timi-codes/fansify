@@ -10,6 +10,7 @@ import { EncryptionModule } from './encryption';
 import { PaymentModule } from './payment';
 import { TradingModule } from './trading/trading.module';
 import { MembershipModule } from './membership/membership.module';
+import { PrismaModule } from './prisma';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { MembershipModule } from './membership/membership.module';
     GraphQLModule.forRootAsync<ApolloDriverConfig>({
       driver: ApolloDriver,
       imports: [ConfigModule],
+      inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
         playground:
           configService.get<string>('NEST_ENVIRONMENT') ===
@@ -25,12 +27,13 @@ import { MembershipModule } from './membership/membership.module';
         buildSchemaOptions: { dateScalarMode: 'timestamp' },
       }),
     }),
+    PrismaModule,
     UserModule,
     AuthModule,
     EncryptionModule,
     PaymentModule,
     TradingModule,
     MembershipModule,
-  ],
+  ]
 })
 export class AppModule {}

@@ -4,6 +4,7 @@ FROM node:18-alpine as base
 WORKDIR /user/src/app
 
 COPY package.json yarn.lock ./
+COPY prisma ./prisma/
 RUN yarn install
 
 COPY . .
@@ -22,6 +23,7 @@ WORKDIR /user/src/app
 COPY --from=base /user/src/app/node_modules ./node_modules
 COPY --from=create-build /user/src/app/dist ./dist
 COPY package.json ./
+
 
 # Prune off the dev dependencies after build step
 RUN yarn install --production
