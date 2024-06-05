@@ -7,6 +7,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
 import { GqlExecutionContext } from '@nestjs/graphql';
+import { IUser } from 'src/common';
 
 @Injectable()
 export class AccessTokenGuard extends AuthGuard('jwt') {
@@ -34,5 +35,18 @@ export class AccessTokenGuard extends AuthGuard('jwt') {
     // graphql content
     const ctx = GqlExecutionContext.create(context);
     return ctx.getContext().req;
+  }
+
+  handleRequest(err: any, user: any, info: any, context: ExecutionContext) {
+    if (err || !user) {
+      throw new UnauthorizedException(
+        'You are not allowed to perform this action.'
+      );
+    }
+
+    const gqlContext = GqlExecutionContext.create(context);
+    gqlContext.getContext().user = user;
+
+    return user;
   }
 }

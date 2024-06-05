@@ -1,3 +1,7 @@
+
+
 export interface IMembership {
-  id: number;
+  name: string;
+  description: string;
+  price: number;
 }

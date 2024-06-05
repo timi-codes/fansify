@@ -1,4 +1,7 @@
-import { RoleArr } from '../constants';
 
-export type Role = (typeof RoleArr)[number];
+export enum Role { 
+    General = 'general',
+    Creator = 'creator'
+}
+
 export type EthereumAddress = `0x${string}`;

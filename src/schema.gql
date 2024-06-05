@@ -63,6 +63,27 @@ type SuccessRegistrationResponseModel {
 type MembershipModel {
   """The ID of the membership."""
   id: Int!
+
+  """The description of the membership."""
+  name: String!
+
+  """The description of the membership."""
+  description: String!
+
+  """The price of the membership."""
+  price: Float!
+
+  """The date the user was created."""
+  updatedAt: Timestamp!
+
+  """The date the user was created."""
+  createdAt: Timestamp!
+
+  """The owner of the membership"""
+  owner: UserModel!
+
+  """The  creator of the membership"""
+  creator: UserModel!
 }
 
 """"""
@@ -149,6 +170,9 @@ type Mutation {
     """The ID of the membership that the user is offering to trade."""
     offeredId: Int!
   ): SuccessResponseModel!
+
+  """Create single or multiple memberships."""
+  createMembership(payload: CreateMembershipInput!): SuccessResponseModel!
 }
 
 """The data fields required to create a user."""
@@ -167,3 +191,18 @@ input CreateUserInput {
 The user role. Accepts the following values: "general", "creator"
 """
 scalar Role
+
+"""The data fields required to create a membership."""
+input CreateMembershipInput {
+  """The unique identifier of the membership."""
+  name: String!
+
+  """The description of the membership."""
+  description: String!
+
+  """The price of the membership."""
+  price: Float!
+
+  """The quantity of this type of membership to create."""
+  quantity: Int!
+}

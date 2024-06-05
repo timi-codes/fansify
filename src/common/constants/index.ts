@@ -1,6 +1,8 @@
+import { Role } from "../types";
+
 export const Environment = {
   Development: 'development',
 };
 
-export const roleArr = ['general', 'creator'];
-export const RoleArr = ['general', 'creator'] as const;
+export const roleArr = Object.values(Role);
+export const RoleArr = Object.values(Role) as Role[];

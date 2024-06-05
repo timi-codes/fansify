@@ -17,4 +17,5 @@ export class SuccessResponseModel implements ISuccessResponse {
     description: 'Contextual message describing what happened.',
   })
   message: string;
+  data?: any;
 }

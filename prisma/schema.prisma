@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
 }
 
@@ -11,15 +11,17 @@ datasource db {
 model User {
   // 📝 Extend this model
 
-  id                Int            @id @default(autoincrement())
-  username          String         @unique
-  ethereumAddress   String         @unique
-  digest            String
-  role              String
-  privateKeyDigest  String
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-  requests          TradeRequest[]
+  id               Int            @id @default(autoincrement())
+  username         String         @unique
+  ethereumAddress  String         @unique
+  digest           String
+  role             String
+  privateKeyDigest String
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  requests         TradeRequest[]
+  membershipsCreated  Membership[] @relation(name: "MembershipCreator")
+  membershipsOwned    Membership[] @relation(name: "MembershipOwner")
 
   @@map("users")
 }
@@ -38,9 +40,20 @@ model TradeRequest {
 }
 
 model Membership {
-  // 📝 Extend this model
+  id                          Int           @id @default(autoincrement())
 
-  id Int @id @default(autoincrement())
+  name                        String       @unique
+  description                 String
+  price                       Float
+  status                      String        @default("UNSOLD")
+  updatedAt                   DateTime      @default(now())
+  createdAt                   DateTime      @default(now())
+
+  creator                     User          @relation(name: "MembershipCreator", fields: [creatorId], references: [id])
+  creatorId                   Int
+  
+  owner                       User          @relation(name: "MembershipOwner", fields: [ownerEthereumAddress], references: [ethereumAddress])
+  ownerEthereumAddress        String
 
   @@map("memberships")
 }

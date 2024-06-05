@@ -12,6 +12,7 @@ import { TradingModule } from './trading/trading.module';
 import { MembershipModule } from './membership/membership.module';
 import { PrismaModule } from './prisma';
 import { WalletService } from './wallet/wallet.service';
+import { ApolloServerPluginLandingPageLocalDefault } from '@apollo/server/plugin/landingPage/default';
 
 @Module({
   imports: [
@@ -21,9 +22,10 @@ import { WalletService } from './wallet/wallet.service';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
-        playground:
-          configService.get<string>('NEST_ENVIRONMENT') ===
-          Environment.Development,
+        playground: false,
+          // configService.get<string>('NEST_ENVIRONMENT') ===
+          // Environment.Development,
+        plugins: [ApolloServerPluginLandingPageLocalDefault()],
         autoSchemaFile: join(process.cwd(), 'src/schema.gql'),
         buildSchemaOptions: { dateScalarMode: 'timestamp' },
       }),

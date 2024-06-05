@@ -3,6 +3,7 @@ import {
   CurrentUser,
   IPagedRequest,
   ISuccessResponse,
+  Role,
   SuccessResponseModel,
 } from '../common';
 import { HttpStatus, UseGuards } from '@nestjs/common';
@@ -47,9 +48,7 @@ export class TradingResolver {
     offset: number,
     @CurrentUser() user: { id: number },
   ): Promise<IPagedRequest<ITradeRequest, number>> {
-    const currentUser = await this.userService.validateRole(user.id, [
-      'general',
-    ]);
+    const currentUser = await this.userService.validateRole(user.id, [Role.General]);
 
     if (!currentUser) {
       throw new GraphQLException(
@@ -77,11 +76,13 @@ export class TradingResolver {
       offset: offset || 0,
       limit: limit || 20,
       count: count,
-      data: data.map(({ createdAt }) => ({
-        requested: { id: -1 }, // 📝 Complete by adding actual requested membership
-        offered: { id: -1 }, // 📝 Complete by adding actual offered membership
-        createdAt,
-      })),
+      data:[]
+        
+      //   data.map(({ createdAt }) => ({
+      //   requested: { id: -1 }, // 📝 Complete by adding actual requested membership
+      //   offered: { id: -1 }, // 📝 Complete by adding actual offered membership
+      //   createdAt,
+      // })),
     };
   }
 
@@ -105,9 +106,7 @@ export class TradingResolver {
     id: number,
     @CurrentUser() user: { id: number },
   ): Promise<ISuccessResponse> {
-    const currentUser = await this.userService.validateRole(user.id, [
-      'general',
-    ]);
+    const currentUser = await this.userService.validateRole(user.id, [Role.General]);
 
     if (!currentUser) {
       throw new GraphQLException(
@@ -171,9 +170,7 @@ export class TradingResolver {
     id: number,
     @CurrentUser() user: { id: number },
   ): Promise<ISuccessResponse> {
-    const currentUser = await this.userService.validateRole(user.id, [
-      'general',
-    ]);
+    const currentUser = await this.userService.validateRole(user.id, [Role.General]);
 
     if (!currentUser) {
       throw new GraphQLException(
@@ -244,9 +241,7 @@ export class TradingResolver {
     offeredId: number,
     @CurrentUser() user: { id: number },
   ): Promise<ISuccessResponse> {
-    const currentUser = await this.userService.validateRole(user.id, [
-      'general',
-    ]);
+    const currentUser = await this.userService.validateRole(user.id, [Role.General]);
 
     if (!currentUser) {
       throw new GraphQLException(
