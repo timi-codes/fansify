@@ -14,6 +14,8 @@ export class UserService {
    * - `username`: the user's username
    * - `digest`: a digest of the user's password (hashed)
    * - `role`: the role of the user - "creator" or "general
+   * - `ethAddress`: the user's Ethereum address
+   * - `privateKeyDigest`: a digest of the user's private key (hashed)
    */
   async createUser(data: Prisma.UserCreateInput): Promise<User> {
     return this.prismaService.user.create({ data });

@@ -11,6 +11,7 @@ import { PaymentModule } from './payment';
 import { TradingModule } from './trading/trading.module';
 import { MembershipModule } from './membership/membership.module';
 import { PrismaModule } from './prisma';
+import { WalletService } from './wallet/wallet.service';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { PrismaModule } from './prisma';
     PaymentModule,
     TradingModule,
     MembershipModule,
-  ]
+  ],
+  providers: [WalletService]
 })
 export class AppModule {}

@@ -8,6 +8,7 @@ import { EncryptionService } from '../encryption';
 import { SuccessRegistrationResponseModel } from './models';
 import { LocalAuthGuard } from './guards';
 import { JwtService } from '@nestjs/jwt';
+import { WalletService } from '../wallet';
 
 @Resolver()
 export class AuthResolver {
@@ -15,6 +16,7 @@ export class AuthResolver {
     private readonly userService: UserService,
     private readonly encryptionService: EncryptionService,
     private readonly jwtService: JwtService,
+    private readonly walletService: WalletService,
   ) {}
 
   /**
@@ -43,10 +45,14 @@ export class AuthResolver {
         };
       }
 
-      const { digest, ...data } = await this.userService.createUser({
+      const { address, privateKeyHash } = await this.walletService.createWallet();
+
+      const { digest, privateKeyDigest,  ...data } = await this.userService.createUser({
         digest: this.encryptionService.generateHash(payload.password),
         username: payload.username,
         role: payload.role,
+        ethereumAddress: address,
+        privateKeyDigest: privateKeyHash,
       });
 
       return {

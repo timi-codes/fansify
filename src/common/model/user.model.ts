@@ -1,5 +1,5 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IUser, Role } from '../types';
+import { EthereumAddress, IUser, Role } from '../types';
 
 @ObjectType({ description: 'The model describing the user.' })
 export class UserModel implements IUser {
@@ -13,4 +13,6 @@ export class UserModel implements IUser {
   updatedAt: Date;
   @Field(() => String, { description: "The user's username." })
   username: string;
+  @Field(() => String, { description: "The user's ethereum address." })
+  ethereumAddress: EthereumAddress;
 }

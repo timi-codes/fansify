@@ -32,6 +32,9 @@ type UserModel {
 
   """The user's username."""
   username: String!
+
+  """The user's ethereum address."""
+  ethereumAddress: String!
 }
 
 """
