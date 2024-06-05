@@ -1,0 +1,33 @@
+version: "3"
+services:
+  postgres:
+    image: postgres:15.1
+    networks:
+      - holdr_default
+    volumes:
+      - ./data/postgres:/data/postgres
+    env_file:
+      - docker.env
+    ports:
+      - '5433:5432'
+    
+  holdr-be:
+    build:
+      context: .
+      target: base
+    command: yarn run start:dev
+    volumes:
+      - ./src:/user/src/app/src
+    image: holdr-be
+    env_file:
+      - .env.local
+    ports:
+      - "4000:4000"
+    depends_on:
+      - postgres
+    networks:
+      -  holdr_default
+
+networks:
+  holdr_default:
+    driver: bridge
