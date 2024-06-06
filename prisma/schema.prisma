@@ -11,19 +11,35 @@ datasource db {
 model User {
   // 📝 Extend this model
 
-  id               Int            @id @default(autoincrement())
-  username         String         @unique
-  ethereumAddress  String         @unique
-  digest           String
-  role             String
-  privateKeyDigest String
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  requests         TradeRequest[]
-  membershipsCreated  Membership[] @relation(name: "MembershipCreator")
-  membershipsOwned    Membership[] @relation(name: "MembershipOwner")
+  id        Int            @id @default(autoincrement())
+  username  String         @unique
+  digest    String
+  role      String
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  requests  TradeRequest[]
+
+  wallet        Wallet @relation(fields: [walletAddress], references: [address])
+  walletAddress String @unique
 
   @@map("users")
+}
+
+model Wallet {
+  id               Int    @id @default(autoincrement())
+  address          String @unique
+  privateKeyDigest String
+  publicKey        String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships Membership[] @relation(name: "MembershipOwner")
+  curated     Membership[] @relation(name: "MembershipCreator")
+
+  owner User?
+
+  @@map("wallets")
 }
 
 model TradeRequest {
@@ -40,20 +56,20 @@ model TradeRequest {
 }
 
 model Membership {
-  id                          Int           @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
-  name                        String       @unique
-  description                 String
-  price                       Float
-  status                      String        @default("UNSOLD")
-  updatedAt                   DateTime      @default(now())
-  createdAt                   DateTime      @default(now())
+  name        String   @unique
+  description String
+  price       Float
+  status      String   @default("UNSOLD")
+  updatedAt   DateTime @default(now())
+  createdAt   DateTime @default(now())
 
-  creator                     User          @relation(name: "MembershipCreator", fields: [creatorId], references: [id])
-  creatorId                   Int
-  
-  owner                       User          @relation(name: "MembershipOwner", fields: [ownerEthereumAddress], references: [ethereumAddress])
-  ownerEthereumAddress        String
+  creator        Wallet @relation(name: "MembershipCreator", fields: [creatorAddress], references: [address])
+  creatorAddress String
+
+  owner        Wallet @relation(name: "MembershipOwner", fields: [ownerAddress], references: [address])
+  ownerAddress String
 
   @@map("memberships")
 }

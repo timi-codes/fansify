@@ -31,6 +31,7 @@ export class AuthResolver {
     @Args('payload', new JoiValidationPipe(CreateUserSchema))
     payload: CreateUserInput,
   ): Promise<ISuccessResponse<IUser>> {
+
     try {
       const user = await this.userService.findOne({
         username: payload.username,
@@ -45,14 +46,25 @@ export class AuthResolver {
         };
       }
 
-      const { address, privateKeyHash } = await this.walletService.createWallet();
+      const wallet = await this.walletService.createWallet();
+      if (!wallet) {
+        return {
+          isSuccess: false,
+          message: 'Failed to create a wallet.',
+          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+          data: null,
+        };
+      }
 
-      const { digest, privateKeyDigest,  ...data } = await this.userService.createUser({
+      const { digest, ...data } = await this.userService.createUser({
         digest: this.encryptionService.generateHash(payload.password),
         username: payload.username,
         role: payload.role,
-        ethereumAddress: address,
-        privateKeyDigest: privateKeyHash,
+        wallet: {
+          connect: {
+            address: wallet.address,
+          },
+        }
       });
 
       return {
@@ -90,6 +102,6 @@ export class AuthResolver {
     @Args('password', { description: "The user's password." }) password: string,
     @Context('user') user: IUser,
   ) {
-    return this.jwtService.signAsync({ sub: user.id });
+    return this.jwtService.signAsync({ sub: user.id, role: user.role, walletAddress: user.walletAddress });
   }
 }

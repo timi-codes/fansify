@@ -5,3 +5,9 @@ export enum Role {
 }
 
 export type EthereumAddress = `0x${string}`;
+
+export interface IWallet { 
+    address: EthereumAddress;
+    publicKey: string;
+    privateKeyDigest: string;
+}

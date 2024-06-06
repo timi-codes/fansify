@@ -14,7 +14,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 contract WavesERC1155Token is Initializable, ERC1155Upgradeable, OwnableUpgradeable {
-    uint256 public maxWavePerCreator = 20;
+    uint256 public maxWavePerCreator;
     mapping(address => mapping(uint256 => uint256)) public tokensMintedByCreator;
 
     function initialize(string memory _uri, address account, uint256 _maxWavePerCreator) public initializer {
@@ -22,9 +22,6 @@ contract WavesERC1155Token is Initializable, ERC1155Upgradeable, OwnableUpgradea
         __Ownable_init(account);
         maxWavePerCreator = _maxWavePerCreator;
     }
-
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() initializer {}
 
     function mint(address account, uint256 id, uint256 amount, bytes memory data) public onlyOwner {
         // Check if the creator has reached the maximum number of waves

@@ -3,8 +3,8 @@ import { Role } from './common';
 export interface IUser {
   id: number;
   username: string;
-  ethereumAddress: string;
   role: Role;
+  walletAddress: string;
   createdAt: Date;
   updatedAt: Date;
 }

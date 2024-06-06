@@ -7,11 +7,13 @@ import { CreateMembershipSchema } from './schema';
 import { CreateMembershipInput } from './inputs';
 import { IMembership } from './types'
 import { MembershipService } from './membership.service';
+import { WalletService } from 'src/wallet';
 
 @Resolver()
 export class MembershipResolver {
     constructor(
         private membershipService: MembershipService,
+        private walletService: WalletService,
     ) { }
     
     /**
@@ -26,7 +28,7 @@ export class MembershipResolver {
     async createMembership(
         @Args('payload', new JoiValidationPipe(CreateMembershipSchema))
         payload: CreateMembershipInput,
-        @CurrentUser() user: { id: number },
+        @CurrentUser() creator: { id: number },
     ): Promise<ISuccessResponse> {
    
         try {
@@ -37,19 +39,20 @@ export class MembershipResolver {
             const membership = await this.membershipService.findOne({ name: payload.name })
 
             if (membership) { 
-                console.log(membership)
-
                 return {
                     isSuccess: false,
                     message: 'A membership with this name already exists. Please try again.',
                     statusCode: HttpStatus.CONFLICT,
                 }
             }
+
+            const trxHash = await this.walletService.mintWaves(creator.id, payload)
+            console.log('trxHash', trxHash)
             
             if (quantity > 1) {
-                memberships = await this.membershipService.createMany(payload, user.id)
+                memberships = await this.membershipService.createMany(payload, creator.id)
             } else {
-                const membership = await this.membershipService.create(payload, user.id)
+                const membership = await this.membershipService.create(payload, creator.id)
                 memberships = memberships.concat(membership)
             }
 

@@ -14,5 +14,5 @@ export class UserModel implements IUser {
   @Field(() => String, { description: "The user's username." })
   username: string;
   @Field(() => String, { description: "The user's ethereum address." })
-  ethereumAddress: EthereumAddress;
+  walletAddress: EthereumAddress;
 }
