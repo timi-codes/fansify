@@ -49,6 +49,8 @@
     "@nestjs/passport": "^10.0.3",
     "@nestjs/platform-express": "^10.0.0",
     "@openzeppelin/contracts": "^5.0.2",
+    "@openzeppelin/contracts-upgradeable": "^5.0.2",
+    "@openzeppelin/hardhat-upgrades": "^3.1.1",
     "@prisma/client": "^5.14.0",
     "@types/bcryptjs": "^2.4.6",
     "bcryptjs": "^2.4.3",
