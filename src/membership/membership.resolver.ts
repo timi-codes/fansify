@@ -1,11 +1,13 @@
 import { HttpStatus, UseGuards } from '@nestjs/common';
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { AccessTokenGuard, RolesGuard } from 'src/auth/guards';
-import { ISuccessResponse, JoiValidationPipe, Roles, Role, CurrentUser, SuccessResponseModel } from '../common';
+import { ISuccessResponse, JoiValidationPipe, Roles, Role, CurrentUser, SuccessResponseModel, MembershipStatus, IPagedRequest } from '../common';
 import { CreateMembershipSchema } from './schema';
 import { CreateMembershipInput } from './inputs';
 import { MembershipService } from './membership.service';
 import { WalletService } from 'src/wallet';
+import { Membership } from '@prisma/client';
+import { PagedMembershipsModel } from './model';
 
 @Resolver()
 export class MembershipResolver {
@@ -27,7 +29,7 @@ export class MembershipResolver {
         @Args('payload', new JoiValidationPipe(CreateMembershipSchema))
         payload: CreateMembershipInput,
         @CurrentUser() creator: { id: number },
-    ): Promise<ISuccessResponse> {
+    ): Promise<ISuccessResponse<Membership[]>> {
    
         try {
             const tagExists = await this.membershipService.tagExists(payload.tag)
@@ -66,6 +68,62 @@ export class MembershipResolver {
                 statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
                 data: null,
             };
+        }
+    }
+
+
+    /**
+     * Retrieve all the trade requests.
+     *
+     * @param limit The maximum number of items to return
+     * @param offset The index of the first item to return.
+     *
+     * @param user The user data object containing the current user's ID
+     */
+    @Query(() => PagedMembershipsModel, { description: "Retrieve all memberships" })
+    @UseGuards(AccessTokenGuard)
+    async fetchAllMembership(
+        @Args('limit', {
+            description: 'The maximum number of items to return',
+            type: () => Int,
+            nullable: true,
+            defaultValue: 20
+        })
+        limit: number,
+        @Args('offset', {
+            description: 'The index of the first item to return.',
+            type: () => Int,
+            nullable: true,
+            defaultValue: 0
+        })
+        offset: number,
+        @Args('status', {
+            description: 'The status of the membership. ',
+            type: () => MembershipStatus,
+            nullable: true,
+            defaultValue: null
+        })
+        status: string,
+    ): Promise<IPagedRequest<Membership, number>>{
+        try {
+
+            const [data, count] = await Promise.all([
+                this.membershipService.findMany(
+                    { limit, offset },
+                    { createdAt: 'desc' },
+                    status ? { status } : undefined,
+                ),
+                this.membershipService.count(status ? { status } : undefined)
+            ]);
+        
+            return {
+                count: count,
+                data: data,
+                limit: limit,
+                offset: offset
+            }
+        } catch (e) {
+            console.error(`[fetchAllMembership query] ${e}`);
         }
     }
 }

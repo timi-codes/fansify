@@ -30,9 +30,9 @@ export class MembershipModel implements IMembership {
   @Field(() => Date, { description: 'The date the user was created.' })
   createdAt: Date;
 
-  @Field(() => UserModel, { description: 'The owner of the membership' })
-  owner?: UserModel;
+  @Field(() => String, { description: 'The wallet address of owner' })
+  ownerAddress: string;
 
-  @Field(() => UserModel, { description: 'The  creator of the membership' })
-  creator?: UserModel;
+  @Field(() => String, { description: 'The wallet address of the creator' })
+  creatorAddress?: string;
 }

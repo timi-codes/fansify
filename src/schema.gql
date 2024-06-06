@@ -85,11 +85,26 @@ type MembershipModel {
   """The date the user was created."""
   createdAt: Timestamp!
 
-  """The owner of the membership"""
-  owner: UserModel!
+  """The wallet address of owner"""
+  ownerAddress: String!
 
-  """The  creator of the membership"""
-  creator: UserModel!
+  """The wallet address of the creator"""
+  creatorAddress: String!
+}
+
+"""Model for paginated memberships reponse"""
+type PagedMembershipsModel {
+  """The maximum number of items to return"""
+  limit: Int!
+
+  """The index of the first item to return."""
+  offset: Int!
+
+  """The total number of items."""
+  count: Int!
+
+  """The trade request item."""
+  data: [MembershipModel!]!
 }
 
 """"""
@@ -131,6 +146,23 @@ type Query {
     """The index of the first item to return."""
     offset: Int
   ): PagedTradeRequestsModel!
+
+  """Retrieve all memberships"""
+  fetchAllMembership(
+    """The maximum number of items to return"""
+    limit: Int = 20
+
+    """The index of the first item to return."""
+    offset: Int = 0
+
+    """The status of the membership. """
+    status: MembershipStatus = null
+  ): PagedMembershipsModel!
+}
+
+enum MembershipStatus {
+  SOLD
+  UNSOLD
 }
 
 type Mutation {

@@ -1,16 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma';
 import { Prisma } from '@prisma/client';
+import { IPaginationOptions } from 'src/common';
 
 interface ICreateTradeRequest {
   requestedId: number;
   offeredId: number;
   userId: number;
-}
-
-interface IPaginationOptions {
-  limit: number;
-  offset: number;
 }
 
 @Injectable()
@@ -25,7 +21,6 @@ export class TradingService {
    * @param userId the ID of the user
    */
   async create({ requestedId, offeredId, userId }: ICreateTradeRequest) {
-    console.log(requestedId, offeredId);
 
     return this.prismaService.tradeRequest.create({
       data: {
