@@ -7,7 +7,7 @@ import { Prisma } from '@prisma/client';
 import { CreateMembershipInput } from 'src/membership/inputs';
 import { artifacts } from 'hardhat';
 import { sepolia, localhost } from 'viem/chains'
-import { WalletClient, createWalletClient, http } from 'viem';
+import { WalletClient, createWalletClient, encodePacked, http } from 'viem';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { EthereumAddress, IWallet } from 'src/common';
 import * as crypto from 'crypto';
@@ -30,8 +30,19 @@ export class WalletService {
         const ETHEREUM_RPC_URL = this.configService.get<string>('ETHEREUM_RPC_URL');
         // const provider = new ethers.JsonRpcProvider(ETHEREUM_RPC_URL);
         this.client = createWalletClient({
-            chain: localhost,
-            transport: http(ETHEREUM_RPC_URL),
+            chain: {
+                id: 31337,
+                name: 'Localhost',
+                nativeCurrency: {
+                    decimals: 18,
+                    name: 'Ether',
+                    symbol: 'ETH',
+                },
+                rpcUrls: {
+                    default: { http: ['http://127.0.0.1:8545'] },
+                },
+            },
+            transport: http(),
         })
     }
 
@@ -68,31 +79,37 @@ export class WalletService {
         const artifact = await artifacts.readArtifact("WavesERC1155Token");
 
         const user = await this.userService.findOne({ id: creatorId });
-        // const byteData = ethers.encodeBase58(JSON.stringify(data));
 
-        const accounts = await this.client.writeContract({
+        const encodedTokenID = encodePacked(
+            ['string', 'string'],
+            [data.tag, user.id.toString()]
+        );
+        
+        const encodedData = encodePacked(
+            ['string', 'string', 'string', 'string', 'string'],
+            [data.tag, data.name, data.price.toString(), data.quantity.toString(), data.description]
+        );
+
+        const trxHash = await this.client.writeContract({
             address: contractAddress as EthereumAddress,
             abi: artifact.abi,
             functionName: 'mint',
             account: privateKeyToAccount(contractDeployerPKDigest),
-            args: [user.walletAddress, data.name, data.quantity, "0x" + JSON.stringify(data)],
-            chain: localhost,
+            args: [user.walletAddress, encodedTokenID, data.quantity, encodedData],
+            chain: {
+            id: 31337,
+            name: 'Localhost',
+            nativeCurrency: {
+                decimals: 18,
+                name: 'Ether',
+                symbol: 'ETH',
+            },
+            rpcUrls: {
+                default: { http: ['http://127.0.0.1:8545'] },
+            },
+        },
         })
-
-        // contractDeployerPKDigest,
-        //     contractAddress,
-        //     'mint',
-        //     [data.walletAddress, data.name, data.quantity, data]
-        console.log('accounts', accounts)
-
-
-        // const wallet = await this.client.wallet.getWallet(contractDeployerPKDigest);
-
- 
-
-        // const contract = new ethers.Contract(contractAddress, artifact.abi, wallet);
-        // const tx = await contract.mint(user.walletAddress, data.name, data.quantity, data);
-        return "tx.hash";
+        return trxHash;
     }
 
 }

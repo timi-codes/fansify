@@ -3,6 +3,10 @@ import { IMembership } from '../types';
 
 @InputType({ description: 'The data fields required to create a membership.' })
 export class CreateMembershipInput {
+
+  @Field(() => String, { description: 'The unique tag to represent this membership.' })
+  tag: string;
+
   @Field(() => String, { description: 'The unique identifier of the membership.' })
   name: string;
 

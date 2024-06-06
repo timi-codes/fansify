@@ -1,11 +1,9 @@
 import { HttpStatus, UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { MembershipModel } from './model';
 import { AccessTokenGuard, RolesGuard } from 'src/auth/guards';
 import { ISuccessResponse, JoiValidationPipe, Roles, Role, CurrentUser, SuccessResponseModel } from '../common';
 import { CreateMembershipSchema } from './schema';
 import { CreateMembershipInput } from './inputs';
-import { IMembership } from './types'
 import { MembershipService } from './membership.service';
 import { WalletService } from 'src/wallet';
 
@@ -32,29 +30,24 @@ export class MembershipResolver {
     ): Promise<ISuccessResponse> {
    
         try {
-            const { quantity } = payload
- 
-            let memberships = []
-
-            const membership = await this.membershipService.findOne({ name: payload.name })
-
-            if (membership) { 
+            const tagExists = await this.membershipService.tagExists(payload.tag)
+            if (tagExists) { 
                 return {
                     isSuccess: false,
-                    message: 'A membership with this name already exists. Please try again.',
-                    statusCode: HttpStatus.CONFLICT,
+                    message: 'A membership with this tag already exists. Please try a different tag.',
+                    statusCode: HttpStatus.BAD_REQUEST,
                 }
             }
 
             const trxHash = await this.walletService.mintWaves(creator.id, payload)
-            console.log('trxHash', trxHash)
-            
-            if (quantity > 1) {
-                memberships = await this.membershipService.createMany(payload, creator.id)
-            } else {
-                const membership = await this.membershipService.create(payload, creator.id)
-                memberships = memberships.concat(membership)
+            if (!trxHash) {
+                return {
+                    isSuccess: false,
+                    message: 'Something went wrong while minting the token. Please try again.',
+                    statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+                }
             }
+            const memberships = await this.membershipService.createMany(payload, creator.id, trxHash)
 
             return {
                 isSuccess: true,

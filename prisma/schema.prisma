@@ -57,11 +57,12 @@ model TradeRequest {
 
 model Membership {
   id Int @id @default(autoincrement())
-
-  name        String   @unique
+  tag         String  @unique
+  name        String
   description String
   price       Float
   status      String   @default("UNSOLD")
+  trxHash     String   @unique
   updatedAt   DateTime @default(now())
   createdAt   DateTime @default(now())
 

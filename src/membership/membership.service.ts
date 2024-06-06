@@ -7,24 +7,14 @@ import { CreateMembershipInput } from './inputs';
 export class MembershipService {
     constructor(private readonly prismaService: PrismaService) { }
 
-    async create(data: CreateMembershipInput, creatorId: number): Promise<Membership> { 
-        const { quantity, ...membership } = data;
-        return this.prismaService.membership.create({
-            data: {
-                ...membership,
-                creator: { connect: { id: creatorId }, },
-                owner: { connect: { id: creatorId }, },
-            }
-        });
-    }
-
-    async createMany(data: CreateMembershipInput, creatorId: number): Promise<Membership[]> { 
+    async createMany(data: CreateMembershipInput, creatorId: number, trxHash: string): Promise<Membership[]> { 
         return Promise.all(Array.from({ length: data.quantity }, async (_, id) => {
             const { quantity, ...membership } = data;
             return this.prismaService.membership.create({
                 data: {
                     ...membership,
-                    name: `${membership.name} #${id + 1}`,
+                    trxHash,
+                    tag: `${membership.tag}-#${id + 1}`,
                     creator: { connect: { id: creatorId }, },
                     owner: { connect: { id: creatorId }, },
                 }
@@ -39,5 +29,18 @@ export class MembershipService {
      */
     async findOne(where?: Prisma.MembershipWhereInput): Promise<Membership> {
         return this.prismaService.membership.findFirst({ where });
+    }
+
+    async tagExists(tag: string): Promise<Boolean> { 
+        const memberships = await this.prismaService.membership.findMany({
+            where: {
+                OR: [
+                    { tag },
+                    { tag: { contains: `${tag}-#` } },
+                ],
+            },
+        });
+
+        return memberships.length > 0 ? true : false;
     }
 }
