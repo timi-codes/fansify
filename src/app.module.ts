@@ -11,8 +11,8 @@ import { PaymentModule } from './payment';
 import { TradingModule } from './trading/trading.module';
 import { MembershipModule } from './membership/membership.module';
 import { PrismaModule } from './prisma';
-import { WalletService } from './wallet/wallet.service';
 import { ApolloServerPluginLandingPageLocalDefault } from '@apollo/server/plugin/landingPage/default';
+import { WalletModule } from './wallet';
 
 @Module({
   imports: [
@@ -37,7 +37,8 @@ import { ApolloServerPluginLandingPageLocalDefault } from '@apollo/server/plugin
     PaymentModule,
     TradingModule,
     MembershipModule,
+    WalletModule,
   ],
-  providers: [WalletService]
+  providers: []
 })
 export class AppModule {}

@@ -42,7 +42,7 @@ contract WavesERC1155Token is Initializable, ERC1155Upgradeable, OwnableUpgradea
     }
 
     function uri(uint256 id) public view override returns (string memory) {
-        return string(abi.encodePacked(super.uri(id), ".json"));
+        return string(abi.encodePacked(super.uri(id)));
     }
 
     function setURI(string memory newuri) external onlyOwner {

@@ -1,8 +1,8 @@
 
 
 export interface IMembership {
-  tag: string;
   name: string;
+  collectionTag?: string;
   description: string;
   price: number;
 }

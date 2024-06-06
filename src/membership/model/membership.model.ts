@@ -5,12 +5,11 @@ import { MembershipStatus, UserModel } from 'src/common';
 @ObjectType({ description: 'A data model representing a membership' })
 export class MembershipModel implements IMembership {
 
-
   @Field(() => Int, { description: 'The ID of the membership.' })
   id: number;
 
-  @Field(() => String, { description: 'The unique identifier for a membership.' })
-  tag: string;
+  @Field(() => String, { nullable: true, description: 'The unique identifier for a membership.' })
+  collectionTag?: string;
 
   @Field(() => String, { description: 'The description of the membership.' })
   name: string;
@@ -33,9 +32,9 @@ export class MembershipModel implements IMembership {
   @Field(() => Date, { description: 'The date the user was created.' })
   createdAt: Date;
 
-  @Field(() => String, { description: 'The wallet address of owner' })
-  ownerAddress: string;
+  @Field(() => Int, { description: 'The wallet address of owner' })
+  ownerId: number;
 
-  @Field(() => String, { description: 'The wallet address of the creator' })
-  creatorAddress?: string;
+  @Field(() => Int, { description: 'The wallet address of the creator' })
+  creatorId?: number;
 }

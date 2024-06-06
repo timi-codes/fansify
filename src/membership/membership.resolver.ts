@@ -32,15 +32,6 @@ export class MembershipResolver {
     ): Promise<ISuccessResponse<Membership[]>> {
    
         try {
-            const tagExists = await this.membershipService.tagExists(payload.tag)
-            if (tagExists) { 
-                return {
-                    isSuccess: false,
-                    message: 'A membership with this tag already exists. Please try a different tag.',
-                    statusCode: HttpStatus.BAD_REQUEST,
-                }
-            }
-
             const trxHash = await this.walletService.mintWaves(creator.id, payload)
             if (!trxHash) {
                 return {

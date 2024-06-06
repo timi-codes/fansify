@@ -6,3 +6,12 @@ export interface ISuccessResponse<T = any> {
   statusCode?: HttpStatus;
   data?: T;
 }
+
+export function createSuccessResponse<T>(
+  isSuccess: boolean,
+  message: string,
+  statusCode?: HttpStatus,
+  data?: T,
+): ISuccessResponse<T> {
+  return { isSuccess, message, data, statusCode };
+}

@@ -6,17 +6,18 @@ import { UserService } from 'src/user';
 import { Prisma } from '@prisma/client';
 import { CreateMembershipInput } from 'src/membership/inputs';
 import { artifacts } from 'hardhat';
-import { sepolia, localhost } from 'viem/chains'
-import { WalletClient, createWalletClient, encodePacked, http } from 'viem';
+import { Chain, WalletClient, createWalletClient, encodePacked, getContract, http, parseAbi, publicActions } from 'viem';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { EthereumAddress, IWallet } from 'src/common';
-import * as crypto from 'crypto';
 import { PrismaService } from 'src/prisma';
+import { localhost } from 'viem/chains';
+import { abi } from '../../artifacts/contracts/WavesERC1155Token.sol/WavesERC1155Token.json';
 
 @Injectable()
 export class WalletService {
     private client: WalletClient;
     private ENCRYPTION_KEY: string;
+    private CHAIN : Chain;
 
     constructor(
         private readonly encryptionService: EncryptionService,
@@ -25,23 +26,10 @@ export class WalletService {
         private readonly prismaService: PrismaService,
     ) {
         this.ENCRYPTION_KEY = this.configService.get<string>('ENCRYPTION_KEY');
-        const key = crypto.randomBytes(32);
-
-        const ETHEREUM_RPC_URL = this.configService.get<string>('ETHEREUM_RPC_URL');
-        // const provider = new ethers.JsonRpcProvider(ETHEREUM_RPC_URL);
+        this.CHAIN = { ...localhost, id: 31337 }
+        
         this.client = createWalletClient({
-            chain: {
-                id: 31337,
-                name: 'Localhost',
-                nativeCurrency: {
-                    decimals: 18,
-                    name: 'Ether',
-                    symbol: 'ETH',
-                },
-                rpcUrls: {
-                    default: { http: ['http://127.0.0.1:8545'] },
-                },
-            },
+            chain: localhost,
             transport: http(),
         })
     }
@@ -82,12 +70,13 @@ export class WalletService {
 
         const encodedTokenID = encodePacked(
             ['string', 'string'],
-            [data.tag, user.id.toString()]
+            [data.collectionTag, user.id.toString()]
         );
-        
+        console.log('encodedTokenID', encodedTokenID, data.collectionTag, user.id.toString())
+
         const encodedData = encodePacked(
             ['string', 'string', 'string', 'string', 'string'],
-            [data.tag, data.name, data.price.toString(), data.quantity.toString(), data.description]
+            [data.collectionTag, data.name, data.price.toString(), data.quantity.toString(), data.description]
         );
 
         const trxHash = await this.client.writeContract({
@@ -96,20 +85,28 @@ export class WalletService {
             functionName: 'mint',
             account: privateKeyToAccount(contractDeployerPKDigest),
             args: [user.walletAddress, encodedTokenID, data.quantity, encodedData],
-            chain: {
-            id: 31337,
-            name: 'Localhost',
-            nativeCurrency: {
-                decimals: 18,
-                name: 'Ether',
-                symbol: 'ETH',
-            },
-            rpcUrls: {
-                default: { http: ['http://127.0.0.1:8545'] },
-            },
-        },
+            chain: this.CHAIN,
         })
         return trxHash;
+    }
+
+    public async hasWave(address: string, creatorId: number, collectionTag: string): Promise<boolean> {
+        const contractAddress = this.configService.get<string>('WAVES_TOKEN_CONTRACT_ADDRESS');
+
+        const encodedTokenID = encodePacked(
+            ['string', 'string'],
+            [collectionTag, creatorId.toString()]
+        );
+
+        console.log('encodedTokenID', encodedTokenID, collectionTag, creatorId.toString())
+        const balance = await this.client.extend(publicActions).readContract({
+            abi,
+            address: contractAddress as EthereumAddress,
+            functionName: 'balanceOf',
+            args: [address, encodedTokenID],
+        }) as number;
+
+        return Number(balance) > 0;
     }
 
 }

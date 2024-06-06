@@ -15,7 +15,6 @@ export class MembershipService {
                 data: {
                     ...membership,
                     trxHash,
-                    tag: `${membership.tag}-#${id + 1}`,
                     creator: { connect: { id: creatorId }, },
                     owner: { connect: { id: creatorId }, },
                 }
@@ -28,8 +27,8 @@ export class MembershipService {
      *
      * @param where the options to use to filter the search:
      */
-    async findOne(where?: Prisma.MembershipWhereInput): Promise<Membership> {
-        return this.prismaService.membership.findFirst({ where });
+    async findOne(where?: Prisma.MembershipWhereInput, include?: Prisma.MembershipInclude): Promise<Membership> {
+        return this.prismaService.membership.findFirst({ where, include });
     }
 
     /**
@@ -65,14 +64,8 @@ export class MembershipService {
 
     async tagExists(tag: string): Promise<Boolean> { 
         const memberships = await this.prismaService.membership.findMany({
-            where: {
-                OR: [
-                    { tag },
-                    { tag: { contains: `${tag}-#` } },
-                ],
-            },
+            where: { collectionTag: tag }
         });
-
         return memberships.length > 0 ? true : false;
     }
 }

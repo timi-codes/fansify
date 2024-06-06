@@ -4,21 +4,27 @@ import {
   IPagedRequest,
   ISuccessResponse,
   Role,
+  Roles,
   SuccessResponseModel,
+  createSuccessResponse,
 } from '../common';
 import { HttpStatus, UseGuards } from '@nestjs/common';
-import { AccessTokenGuard } from '../auth/guards';
+import { AccessTokenGuard, RolesGuard } from '../auth/guards';
 import { PagedTradeRequestsModel } from './models';
 import { ITradeRequest } from './types';
 import { UserService } from '../user';
 import { TradingService } from './trading.service';
 import { GraphQLException } from '@nestjs/graphql/dist/exceptions';
+import { MembershipService } from 'src/membership/membership.service';
+import { WalletService } from 'src/wallet';
 
 @Resolver()
 export class TradingResolver {
   constructor(
     private userService: UserService,
     private tradingService: TradingService,
+    private membershipService: MembershipService,
+    private walletService: WalletService,
   ) {}
 
   /**
@@ -225,7 +231,8 @@ export class TradingResolver {
   @Mutation(() => SuccessResponseModel, {
     description: 'Request a trade for a membership.',
   })
-  @UseGuards(AccessTokenGuard)
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  @Roles(Role.General)
   async requestTrade(
     @Args('requestedId', {
       description:
@@ -239,37 +246,40 @@ export class TradingResolver {
       type: () => Int,
     })
     offeredId: number,
-    @CurrentUser() user: { id: number },
+    @CurrentUser() user: { id: number, walletAddress: string },
   ): Promise<ISuccessResponse> {
-    const currentUser = await this.userService.validateRole(user.id, [Role.General]);
-
-    if (!currentUser) {
-      throw new GraphQLException(
-        'You are not allowed to perform this action.',
-        {
-          extensions: {
-            http: {
-              status: HttpStatus.UNAUTHORIZED,
-            },
-          },
-        },
-      );
-    }
 
     try {
+
+      if (requestedId === offeredId) { 
+        return createSuccessResponse(false, 'You cannot request a trade for the same membership.', HttpStatus.BAD_REQUEST)
+      }
+
+
+      const [requestedMembership, offeredMembership] = await Promise.all([
+        this.membershipService.findOne({ id: requestedId }),
+        this.membershipService.findOne({ id: offeredId }, { owner: true }),
+      ]);
+
+      if (!requestedMembership || !offeredMembership) {
+        return createSuccessResponse(false, 'Invalid requested or offered ID.', HttpStatus.BAD_REQUEST)
+      }
+
+      if (user.id != offeredMembership.ownerId)
+        return createSuccessResponse(false, 'You do not own the offered membership.', HttpStatus.UNAUTHORIZED)
+
+      const hasWave = await this.walletService.hasWave(user.walletAddress, offeredMembership.creatorId, offeredMembership.collectionTag);
+      if (!hasWave) {
+        return createSuccessResponse(false, 'You do not own the offered membership.', HttpStatus.UNAUTHORIZED)
+      }
+
       const data = await this.tradingService.create({
         requestedId,
         offeredId,
-        userId: currentUser.id,
+        userId: user.id,
       });
 
-      return {
-        isSuccess: false,
-        message:
-          'Something weird happened. Please try again, and connect with us if it persists.',
-        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-        data: data,
-      };
+      return createSuccessResponse(true, 'Trade request has been successfully submitted.', HttpStatus.OK, data);
     } catch (e) {
       console.error(`[requestTrade mutation] ${e}`);
 

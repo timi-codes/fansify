@@ -9,8 +9,6 @@ datasource db {
 }
 
 model User {
-  // 📝 Extend this model
-
   id        Int            @id @default(autoincrement())
   username  String         @unique
   digest    String
@@ -21,6 +19,9 @@ model User {
 
   wallet        Wallet @relation(fields: [walletAddress], references: [address])
   walletAddress String @unique
+
+  memberships Membership[] @relation(name: "MembershipOwner")
+  curated     Membership[] @relation(name: "MembershipCreator")
 
   @@map("users")
 }
@@ -33,9 +34,6 @@ model Wallet {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  memberships Membership[] @relation(name: "MembershipOwner")
-  curated     Membership[] @relation(name: "MembershipCreator")
 
   owner User?
 
@@ -56,21 +54,22 @@ model TradeRequest {
 }
 
 model Membership {
-  id Int @id @default(autoincrement())
-  tag         String  @unique
-  name        String
-  description String
-  price       Float
-  status      String   @default("UNSOLD")
-  trxHash     String   
-  updatedAt   DateTime @default(now())
-  createdAt   DateTime @default(now())
+  id              Int @id @default(autoincrement())
+  name            String
+  description     String
+  price           Float
+  status          String   @default("UNSOLD")
+  trxHash         String   
+  collectionTag   String?
 
-  creator        Wallet @relation(name: "MembershipCreator", fields: [creatorAddress], references: [address])
-  creatorAddress String
+  updatedAt       DateTime @default(now())
+  createdAt       DateTime @default(now())
 
-  owner        Wallet @relation(name: "MembershipOwner", fields: [ownerAddress], references: [address])
-  ownerAddress String
+  creator         User @relation(name: "MembershipCreator", fields: [creatorId], references: [id])
+  creatorId       Int
+
+  owner           User @relation(name: "MembershipOwner", fields: [ownerId], references: [id])
+  ownerId         Int
 
   @@map("memberships")
 }

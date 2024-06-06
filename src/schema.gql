@@ -51,7 +51,7 @@ type MembershipModel {
   id: Int!
 
   """The unique identifier for a membership."""
-  tag: String!
+  collectionTag: String
 
   """The description of the membership."""
   name: String!
@@ -75,10 +75,10 @@ type MembershipModel {
   createdAt: Timestamp!
 
   """The wallet address of owner"""
-  ownerAddress: String!
+  ownerId: Int!
 
   """The wallet address of the creator"""
-  creatorAddress: String!
+  creatorId: Int!
 }
 
 enum MembershipStatus {
@@ -247,11 +247,11 @@ type SuccessResponseModel {
 
 """The data fields required to create a membership."""
 input CreateMembershipInput {
-  """The unique tag to represent this membership."""
-  tag: String!
-
   """The unique identifier of the membership."""
   name: String!
+
+  """An identifier to group collection of membership."""
+  collectionTag: String!
 
   """The description of the membership."""
   description: String!
