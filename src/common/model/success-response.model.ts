@@ -1,12 +1,13 @@
 import { Field, Int, ObjectType } from '@nestjs/graphql';
 import { ISuccessResponse } from '../types';
-import { HttpStatus } from '@nestjs/common';
+import { HttpStatus, Type } from '@nestjs/common';
 
 @ObjectType({
+  isAbstract: true,
   description:
     'A response model, containing the state of the response from the server.',
 })
-export class SuccessResponseModel implements ISuccessResponse {
+export abstract class SuccessResponseModel<T> implements ISuccessResponse<T> {
   @Field(() => Int, { description: 'The HTTP status of the response.' })
   statusCode?: HttpStatus;
   @Field(() => Boolean, {
@@ -17,5 +18,6 @@ export class SuccessResponseModel implements ISuccessResponse {
     description: 'Contextual message describing what happened.',
   })
   message: string;
-  data?: any;
+  // @Field(() => Type, { nullable: true, description: 'Additional data returned from the server.' })
+  data?: T;
 }

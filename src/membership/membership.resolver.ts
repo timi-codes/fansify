@@ -20,7 +20,7 @@ export class MembershipResolver {
      *  Create single or multiple memberships.
      * @param payload The data required to create a new membership
      */
-    @Mutation(() => SuccessResponseModel, {
+    @Mutation(() => SuccessResponseModel<Membership[]>, {
         description: 'Create single or multiple memberships.'
     })
     @UseGuards(AccessTokenGuard, RolesGuard)
@@ -50,7 +50,6 @@ export class MembershipResolver {
                 }
             }
             const memberships = await this.membershipService.createMany(payload, creator.id, trxHash)
-
             return {
                 isSuccess: true,
                 message: 'Successfully created your membership.',

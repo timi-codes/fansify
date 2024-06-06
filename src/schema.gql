@@ -2,20 +2,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
-"""
-A response model, containing the state of the response from the server.
-"""
-type SuccessResponseModel {
-  """The HTTP status of the response."""
-  statusCode: Int!
-
-  """Determines whether the server action was successful."""
-  isSuccess: Boolean!
-
-  """Contextual message describing what happened."""
-  message: String!
-}
-
 """The model describing the user."""
 type UserModel {
   """The date the user was created."""
@@ -244,6 +230,20 @@ input CreateUserInput {
 The user role. Accepts the following values: "general", "creator"
 """
 scalar Role
+
+"""
+A response model, containing the state of the response from the server.
+"""
+type SuccessResponseModel {
+  """The HTTP status of the response."""
+  statusCode: Int!
+
+  """Determines whether the server action was successful."""
+  isSuccess: Boolean!
+
+  """Contextual message describing what happened."""
+  message: String!
+}
 
 """The data fields required to create a membership."""
 input CreateMembershipInput {
