@@ -73,12 +73,10 @@ export class MembershipResolver {
 
 
     /**
-     * Retrieve all the trade requests.
+     * Retrieve all the membership.
      *
      * @param limit The maximum number of items to return
      * @param offset The index of the first item to return.
-     *
-     * @param user The user data object containing the current user's ID
      */
     @Query(() => PagedMembershipsModel, { description: "Retrieve all memberships" })
     @UseGuards(AccessTokenGuard)
@@ -106,22 +104,66 @@ export class MembershipResolver {
         status: string,
     ): Promise<IPagedRequest<Membership, number>>{
         try {
-
+            const whereCondition: any = status ? { status } : undefined;
             const [data, count] = await Promise.all([
                 this.membershipService.findMany(
                     { limit, offset },
                     { createdAt: 'desc' },
-                    status ? { status } : undefined,
+                    whereCondition
                 ),
-                this.membershipService.count(status ? { status } : undefined)
+                this.membershipService.count(whereCondition)
             ]);
         
-            return {
-                count: count,
-                data: data,
-                limit: limit,
-                offset: offset
-            }
+            return { count, data, limit, offset }
+        } catch (e) {
+            console.error(`[fetchAllMembership query] ${e}`);
+        }
+    }
+
+    /**
+ * Retrieve current user's membership.
+ *
+ * @param limit The maximum number of items to return
+ * @param offset The index of the first item to return.
+ */
+    @Query(() => PagedMembershipsModel, { description: "Retrieve current user's memberships" })
+    @UseGuards(AccessTokenGuard)
+    async fetchMyMembership(
+        @Args('limit', {
+            description: 'The maximum number of items to return',
+            type: () => Int,
+            defaultValue: 20
+        })
+        limit: number,
+        @Args('offset', {
+            description: 'The index of the first item to return.',
+            type: () => Int,
+            defaultValue: 0
+        })
+        offset: number,
+        @Args('status', {
+            description: 'The status of the membership. ',
+            type: () => MembershipStatus,
+            nullable: true,
+            defaultValue: null
+        })
+        status: string,
+        @CurrentUser() user: { id: number },
+    ): Promise<IPagedRequest<Membership, number>> {
+        try {
+            const whereCondition: any = { owner: { id: user.id } };
+            if (status) whereCondition.status = status;
+            
+            const [data, count] = await Promise.all([
+                this.membershipService.findMany(
+                    { limit, offset },
+                    { createdAt: 'desc' },
+                    whereCondition
+                ),
+                this.membershipService.count(whereCondition)
+            ]);
+
+            return { count, data, limit, offset }
         } catch (e) {
             console.error(`[fetchAllMembership query] ${e}`);
         }

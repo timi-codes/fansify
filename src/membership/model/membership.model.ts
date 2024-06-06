@@ -1,6 +1,6 @@
 import { IMembership } from '../types';
 import { Field, Float, Int, ObjectType } from '@nestjs/graphql';
-import { UserModel } from 'src/common';
+import { MembershipStatus, UserModel } from 'src/common';
 
 @ObjectType({ description: 'A data model representing a membership' })
 export class MembershipModel implements IMembership {
@@ -23,6 +23,9 @@ export class MembershipModel implements IMembership {
 
   @Field(() => String, { description: 'The transaction hash of the minted token' })
   trxHash: string;
+
+  @Field(() => MembershipStatus, { description: 'The creator of the membership.' })
+  status: string;
 
   @Field(() => Date, { description: 'The date the user was created.' })
   updatedAt: Date;

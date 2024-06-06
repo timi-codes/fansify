@@ -79,6 +79,9 @@ type MembershipModel {
   """The transaction hash of the minted token"""
   trxHash: String!
 
+  """The creator of the membership."""
+  status: MembershipStatus!
+
   """The date the user was created."""
   updatedAt: Timestamp!
 
@@ -90,6 +93,11 @@ type MembershipModel {
 
   """The wallet address of the creator"""
   creatorAddress: String!
+}
+
+enum MembershipStatus {
+  SOLD
+  UNSOLD
 }
 
 """Model for paginated memberships reponse"""
@@ -158,11 +166,18 @@ type Query {
     """The status of the membership. """
     status: MembershipStatus = null
   ): PagedMembershipsModel!
-}
 
-enum MembershipStatus {
-  SOLD
-  UNSOLD
+  """Retrieve current user's memberships"""
+  fetchMyMembership(
+    """The maximum number of items to return"""
+    limit: Int! = 20
+
+    """The index of the first item to return."""
+    offset: Int! = 0
+
+    """The status of the membership. """
+    status: MembershipStatus = null
+  ): PagedMembershipsModel!
 }
 
 type Mutation {

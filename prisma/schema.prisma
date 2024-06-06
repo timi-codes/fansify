@@ -62,7 +62,7 @@ model Membership {
   description String
   price       Float
   status      String   @default("UNSOLD")
-  trxHash     String   @unique
+  trxHash     String   
   updatedAt   DateTime @default(now())
   createdAt   DateTime @default(now())
 
