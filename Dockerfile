@@ -6,10 +6,8 @@ WORKDIR /user/src/app
 COPY package.json yarn.lock hardhat.config.js ./
 COPY prisma ./prisma/
 RUN yarn install
-RUN yarn contracts:compile
 
 COPY . .
-COPY artifacts ./artifacts
 
 
 # Creating a build:
@@ -25,7 +23,6 @@ WORKDIR /user/src/app
 
 COPY --from=base /user/src/app/node_modules ./node_modules
 COPY --from=create-build /user/src/app/dist ./dist
-COPY --from=base /user/src/app/artifacts ./artifacts
 
 COPY package.json ./
 
