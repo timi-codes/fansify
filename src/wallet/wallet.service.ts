@@ -5,7 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { UserService } from 'src/user';
 import { CreateMembershipInput } from 'src/membership/inputs';
 import { Account, Chain, WalletClient, createWalletClient, encodePacked, http, publicActions } from 'viem';
-import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
+import { generatePrivateKey, mnemonicToAccount, privateKeyToAccount } from 'viem/accounts';
 import { EthereumAddress, IWallet, MembershipWithInclude, MintReceipt } from 'src/common';
 import { PrismaService } from 'src/prisma';
 import { localhost } from 'viem/chains';
@@ -16,7 +16,8 @@ export class WalletService {
     private client: WalletClient;
     private ENCRYPTION_KEY: string;
     private CHAIN: Chain;
-    private custodialWallet: Account
+    private custodialWallet: Account;
+    private contractAddress: EthereumAddress;
 
     constructor(
         private readonly encryptionService: EncryptionService,
@@ -24,11 +25,12 @@ export class WalletService {
         private readonly userService: UserService,
         private readonly prismaService: PrismaService,
     ) {
+        this.contractAddress = this.configService.get<EthereumAddress>('WAVES_TOKEN_CONTRACT_ADDRESS');
         this.ENCRYPTION_KEY = this.configService.get<string>('ENCRYPTION_KEY');
         this.CHAIN = { ...localhost, id: 31337 }
 
-        const contractDeployerPK = this.configService.get<EthereumAddress>('CONTRACT_DEPLOYER_PK_DIGEST');
-        this.custodialWallet = privateKeyToAccount(contractDeployerPK)
+        const contractDeployerPK = this.configService.get<EthereumAddress>('CONTRACT_DEPLOYER_MNEMONIC');
+        this.custodialWallet = mnemonicToAccount(contractDeployerPK)
 
         this.client = createWalletClient({
             chain: localhost,
@@ -59,8 +61,6 @@ export class WalletService {
     }
 
     public async mintWaves(creatorId: number, data: CreateMembershipInput): Promise<MintReceipt> {
-        const contractAddress = this.configService.get<string>('WAVES_TOKEN_CONTRACT_ADDRESS');
-        const contractDeployerPKDigest = this.configService.get<EthereumAddress>('CONTRACT_DEPLOYER_PK_DIGEST');
 
         const user = await this.userService.findOne({ id: creatorId });
 
@@ -76,10 +76,10 @@ export class WalletService {
         );
 
         const trxHash = await this.client.writeContract({
-            address: contractAddress as EthereumAddress,
+            address: this.contractAddress,
             abi,
             functionName: 'mint',
-            account: privateKeyToAccount(contractDeployerPKDigest),
+            account: this.custodialWallet,
             args: [user.walletAddress, encodedTokenID, data.quantity, encodedData],
             chain: this.CHAIN,
         })
@@ -91,7 +91,6 @@ export class WalletService {
     }
 
     public async hasWave(address: string, creatorId: number, collectionTag: string): Promise<boolean> {
-        const contractAddress = this.configService.get<string>('WAVES_TOKEN_CONTRACT_ADDRESS');
 
         const encodedTokenID = encodePacked(
             ['string', 'string'],
@@ -101,7 +100,7 @@ export class WalletService {
         console.log('encodedTokenID', encodedTokenID, collectionTag, creatorId.toString())
         const balance = await this.client.extend(publicActions).readContract({
             abi,
-            address: contractAddress as EthereumAddress,
+            address: this.contractAddress,
             functionName: 'balanceOf',
             args: [address, encodedTokenID],
         }) as number;
@@ -129,10 +128,9 @@ export class WalletService {
     }
 
     public async exchangeWave(requested: MembershipWithInclude, offered: MembershipWithInclude): Promise<string> { 
-        const contractAddress = this.configService.get<string>('WAVES_TOKEN_CONTRACT_ADDRESS');
         console.log('exchangeWave', requested, offered)
         const trxHash = await this.client.writeContract({
-            address: contractAddress as EthereumAddress,
+            address: this.contractAddress,
             abi,
             functionName: 'exchangeWave',
             account: this.custodialWallet,
@@ -149,7 +147,6 @@ export class WalletService {
     }
 
     private async setApprovalForAll(owner: string, operator: string, approved: boolean): Promise<string> {
-        const contractAddress = this.configService.get<string>('WAVES_TOKEN_CONTRACT_ADDRESS');
 
         const wallet = await this.prismaService.wallet.findUnique({ where: { address: owner } });
 
@@ -157,7 +154,7 @@ export class WalletService {
         const account = privateKeyToAccount(privateKey as EthereumAddress);
 
         const payload = {
-            address: contractAddress as EthereumAddress,
+            address: this.contractAddress,
             abi,
             functionName: 'setApprovalForAll',
             account,
