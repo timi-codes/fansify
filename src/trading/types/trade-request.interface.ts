@@ -1,7 +1,9 @@
 import { IMembership } from '../../membership/types';
 
 export interface ITradeRequest {
-  requested: IMembership;
-  offered: IMembership;
+  requestedId: number;
+  offeredId: number;
+  trxHash?: string;
   createdAt: Date;
+  updatedAt: Date;
 }

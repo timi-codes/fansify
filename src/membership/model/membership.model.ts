@@ -9,7 +9,10 @@ export class MembershipModel implements IMembership {
   id: number;
 
   @Field(() => String, { nullable: true, description: 'The unique identifier for a membership.' })
-  collectionTag?: string;
+  collectionTag: string;
+
+  @Field(() => String, { nullable: true, description: 'The onchain membership id' })
+  tokenId: string;
 
   @Field(() => String, { description: 'The description of the membership.' })
   name: string;
@@ -32,9 +35,9 @@ export class MembershipModel implements IMembership {
   @Field(() => Date, { description: 'The date the user was created.' })
   createdAt: Date;
 
-  @Field(() => Int, { description: 'The wallet address of owner' })
+  @Field(() => Int, { description: 'The id of owner' })
   ownerId: number;
 
-  @Field(() => Int, { description: 'The wallet address of the creator' })
-  creatorId?: number;
+  @Field(() => Int, { description: 'The id of the creator' })
+  creatorId: number;
 }

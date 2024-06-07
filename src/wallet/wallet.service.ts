@@ -140,7 +140,7 @@ export class WalletService {
 
     public async exchangeWave(requested: MembershipWithInclude, offered: MembershipWithInclude): Promise<string> { 
         const contractAddress = this.configService.get<string>('WAVES_TOKEN_CONTRACT_ADDRESS');
-
+        console.log('exchangeWave', requested, offered)
         const trxHash = await this.client.writeContract({
             address: contractAddress as EthereumAddress,
             abi,

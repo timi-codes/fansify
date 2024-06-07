@@ -8,6 +8,16 @@ import { IPaginationOptions, MembershipWithInclude, MintReceipt } from 'src/comm
 export class MembershipService {
     constructor(private readonly prismaService: PrismaService) { }
 
+    /**
+     * Create a new membership record.
+     * 
+     * @param data the data to create the membership record
+     * @param creatorId the ID of the creator
+     * @param mintReceipt the mint receipt
+     * @returns the created membership record
+     * 
+     * @throws an error if the membership record could not be created
+    */
     async createMany(data: CreateMembershipInput, creatorId: number, mintReceipt: MintReceipt): Promise<Membership[]> { 
         return Promise.all(Array.from({ length: data.quantity }, async (_, id) => {
             const { quantity, ...membership } = data;
@@ -33,12 +43,12 @@ export class MembershipService {
     }
 
     /**
- * Get all the membership records.
- *
- * @param where the where clause options
- * @param orderBy the options used to order the data
- * @param data the data to update
- */
+     * Get all the membership records.
+     *
+     * @param where the where clause options
+     * @param orderBy the options used to order the data
+     * @param data the data to update
+     */
     async findMany(
         { limit, offset }: IPaginationOptions,
         orderBy?: Prisma.MembershipOrderByWithRelationInput,
@@ -63,13 +73,15 @@ export class MembershipService {
         });
     }
 
-    async tagExists(tag: string): Promise<Boolean> { 
-        const memberships = await this.prismaService.membership.findMany({
-            where: { collectionTag: tag }
-        });
-        return memberships.length > 0 ? true : false;
-    }
-
+    /**
+     * Find membership by ids
+     * 
+     * @param ids the ids of the membership
+     * @param include the include options
+     * @returns the membership records
+     * 
+     * @throws an error if the membership records could not be found
+     * */
     async findByIds(ids: number[], include?: Prisma.MembershipInclude): Promise<MembershipWithInclude[]> {
         return this.prismaService.membership.findMany({
             where: { id: { in: ids } },

@@ -1,10 +1,16 @@
-import { Args, Int, Mutation, Resolver } from '@nestjs/graphql';
-import { CurrentUser, ISuccessResponse, MembershipStatus, SuccessResponseModel, createSuccessResponse } from '../common';
+import { Args, Int, Mutation, ObjectType, Resolver } from '@nestjs/graphql';
+import { CurrentUser, ISuccessResponse, MembershipStatus, Role, Roles, SuccessResponseModel, createSuccessResponse } from '../common';
 import { HttpStatus, UseGuards } from '@nestjs/common';
-import { AccessTokenGuard } from '../auth/guards';
+import { AccessTokenGuard, RolesGuard } from '../auth/guards';
 import { MembershipService } from 'src/membership/membership.service';
 import { WalletService } from 'src/wallet';
 import { UserService } from 'src/user';
+import { Membership } from '@prisma/client';
+import { MembershipModel } from 'src/membership/model';
+
+@ObjectType()
+class SuccessResponse extends SuccessResponseModel(MembershipModel) { }
+
 
 @Resolver()
 export class PaymentResolver {
@@ -21,10 +27,11 @@ export class PaymentResolver {
    *
    * @param user The user data object containing the current user's ID
    */
-  @Mutation(() => SuccessResponseModel, {
+  @Mutation(() => SuccessResponse, {
     description: 'Buy a membership from a creator.',
   })
-  @UseGuards(AccessTokenGuard)
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  @Roles(Role.General)
   async buyMemberships(
     @Args('id', {
       description: 'The ID of the membership.',
@@ -32,7 +39,7 @@ export class PaymentResolver {
     })
     id: number,
     @CurrentUser() currentUser: { id: number },
-  ): Promise<ISuccessResponse> {
+  ): Promise<ISuccessResponse<Membership>> {
 
     try {
 
@@ -64,12 +71,8 @@ export class PaymentResolver {
       return createSuccessResponse(true, 'Membership bought successfully', HttpStatus.OK, updatedMembership);
 
     } catch (e) {
-      console.error('Error buying membership', e);
-      return {
-        isSuccess: false,
-        message: 'Not yet implemented',
-        statusCode: e,
-      };
+      console.error(`[buyMemberships query] ${e}`);
+      return createSuccessResponse(false, 'Failed to buy membership', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 }

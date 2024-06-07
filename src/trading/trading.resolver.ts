@@ -1,6 +1,10 @@
-import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { TradeRequest } from '@prisma/client';
+import { HttpStatus, UseGuards } from '@nestjs/common';
+import { Args, Int, Mutation, ObjectType, Query, Resolver } from '@nestjs/graphql';
 import {
   CurrentUser,
+  DEFAULT_PAGE_LIMIT,
+  DEFAULT_PAGE_OFFSET,
   IPagedRequest,
   ISuccessResponse,
   Role,
@@ -9,15 +13,23 @@ import {
   TradeStatus,
   createSuccessResponse,
 } from '../common';
-import { HttpStatus, UseGuards } from '@nestjs/common';
+
 import { AccessTokenGuard, RolesGuard } from '../auth/guards';
-import { PagedTradeRequestsModel } from './models';
-import { ITradeRequest } from './types';
+import { PagedTradeRequestsModel, TradeRequestModel } from './models';
 import { UserService } from '../user';
 import { TradingService } from './trading.service';
-import { GraphQLException } from '@nestjs/graphql/dist/exceptions';
-import { MembershipService } from 'src/membership/membership.service';
-import { WalletService } from 'src/wallet';
+import { MembershipService } from '../membership';
+import { WalletService } from '../wallet';
+
+@ObjectType()
+class AcceptTradeSuccessResponse extends SuccessResponseModel<TradeRequest>(TradeRequestModel) { }
+
+@ObjectType()
+class DeclineTradeSuccessResponse extends SuccessResponseModel<TradeRequest>(TradeRequestModel) { }
+
+@ObjectType()
+class RequestTradeSuccessResponse extends SuccessResponseModel<TradeRequest>(TradeRequestModel) { }
+
 
 @Resolver()
 export class TradingResolver {
@@ -44,53 +56,38 @@ export class TradingResolver {
     @Args('limit', {
       description: 'The maximum number of items to return',
       type: () => Int,
-      nullable: true,
+      defaultValue: DEFAULT_PAGE_LIMIT 
     })
     limit: number,
     @Args('offset', {
       description: 'The index of the first item to return.',
       type: () => Int,
-      nullable: true,
+      defaultValue: DEFAULT_PAGE_OFFSET
     })
     offset: number,
-    @CurrentUser() user: { id: number },
-  ): Promise<IPagedRequest<ITradeRequest, number>> {
-    const currentUser = await this.userService.validateRole(user.id, [Role.General]);
+    @Args('status', {
+      description: 'The status of the trade request. ',
+      type: () => TradeStatus,
+      nullable: true,
+    })
+    status: string,
+  ): Promise<IPagedRequest<TradeRequest, number>> {
+    
+    try {
+      const whereCondition: any = status ? { status } : undefined;
+      const [data, count] = await Promise.all([
+        this.tradingService.findMany(
+          { limit, offset },
+          { createdAt: 'desc' },
+          whereCondition
+        ),
+        this.tradingService.count(whereCondition)
+      ]);
 
-    if (!currentUser) {
-      throw new GraphQLException(
-        'You are not allowed to perform this action.',
-        {
-          extensions: {
-            http: {
-              status: HttpStatus.UNAUTHORIZED,
-            },
-          },
-        },
-      );
+      return { count, data, limit, offset }
+    } catch (e) {
+      console.error(`[fetchAllMembership query] ${e}`);
     }
-
-    const [data, count] = await Promise.all([
-      this.tradingService.findMany(
-        { userId: currentUser.id },
-        { limit: limit || 20, offset: offset || 0 },
-        { createdAt: 'desc' },
-      ),
-      this.tradingService.count({ userId: currentUser.id }),
-    ]);
-
-    return {
-      offset: offset || 0,
-      limit: limit || 20,
-      count: count,
-      data:[]
-        
-      //   data.map(({ createdAt }) => ({
-      //   requested: { id: -1 }, // 📝 Complete by adding actual requested membership
-      //   offered: { id: -1 }, // 📝 Complete by adding actual offered membership
-      //   createdAt,
-      // })),
-    };
   }
 
   /**
@@ -100,11 +97,12 @@ export class TradingResolver {
    *
    * @param user The user data object containing the current user's ID
    */
-  @Mutation(() => SuccessResponseModel, {
+  @Mutation(() => AcceptTradeSuccessResponse, {
     description:
       'Accept the trade of owned membership with another user’s owned membership.',
   })
-  @UseGuards(AccessTokenGuard)
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  @Roles(Role.General)
   async acceptTrade(
     @Args('id', {
       description: 'The ID of the trade.',
@@ -112,7 +110,7 @@ export class TradingResolver {
     })
     id: number,
     @CurrentUser() currentUser: { id: number },
-  ): Promise<ISuccessResponse> {
+  ): Promise<ISuccessResponse<TradeRequest>> {
 
     try {
       const trade = await this.tradingService.findOne({ id });
@@ -126,7 +124,7 @@ export class TradingResolver {
 
       const [requested, offered] = await this.membershipService.findByIds([
         trade.requestedId, trade.offeredId],
-        { creator: true }
+        { creator: true, owner: true }
       )
 
       if (requested.ownerId != currentUser.id) {
@@ -160,7 +158,7 @@ export class TradingResolver {
    *
    * @param user The user data object containing the current user's ID
    */
-  @Mutation(() => SuccessResponseModel, {
+  @Mutation(() => DeclineTradeSuccessResponse, {
     description:
       'Decline the trade of owned membership with another user’s owned membership.',
   })
@@ -173,7 +171,7 @@ export class TradingResolver {
     })
     id: number,
     @CurrentUser() user: { id: number },
-  ): Promise<ISuccessResponse> {
+  ): Promise<ISuccessResponse<TradeRequest>> {
 
     try {
       const trade = await this.tradingService.findOne({ id }, { requested: true });
@@ -194,14 +192,7 @@ export class TradingResolver {
       return createSuccessResponse(true, 'Trade request has been successfully declined.', HttpStatus.OK, data);
     } catch (e) {
       console.error(`[declineTrade mutation] ${e}`);
-
-      return {
-        isSuccess: false,
-        message:
-          'Something weird happened. Please try again, and connect with us if it persists.',
-        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-        data: null,
-      };
+      return createSuccessResponse(false, 'Something weird happened. Please try again, and connect with us if it persists.', HttpStatus.INTERNAL_SERVER_ERROR)
     }
   }
 
@@ -213,7 +204,7 @@ export class TradingResolver {
    *
    * @param user Request a trade for a membership
    */
-  @Mutation(() => SuccessResponseModel, {
+  @Mutation(() => RequestTradeSuccessResponse, {
     description: 'Request a trade for a membership.',
   })
   @UseGuards(AccessTokenGuard, RolesGuard)
@@ -232,14 +223,13 @@ export class TradingResolver {
     })
     offeredId: number,
     @CurrentUser() user: { id: number, walletAddress: string },
-  ): Promise<ISuccessResponse> {
+  ): Promise<ISuccessResponse<TradeRequest>> {
 
     try {
 
       if (requestedId === offeredId) { 
         return createSuccessResponse(false, 'You cannot request a trade for the same membership.', HttpStatus.BAD_REQUEST)
       }
-
 
       const [requestedMembership, offeredMembership] = await Promise.all([
         this.membershipService.findOne({ id: requestedId }),
@@ -264,17 +254,11 @@ export class TradingResolver {
         userId: user.id,
       });
 
-      return createSuccessResponse(true, 'Trade request has been successfully submitted.', HttpStatus.OK, data);
+      return createSuccessResponse(true, 'Trade request has been successfully submitted.', HttpStatus.CREATED, data);
     } catch (e) {
       console.error(`[requestTrade mutation] ${e}`);
 
-      return {
-        isSuccess: false,
-        message:
-          'Something weird happened. Please try again, and connect with us if it persists.',
-        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-        data: null,
-      };
+      return createSuccessResponse(false, 'Something weird happened. Please try again, and connect with us if it persists.', HttpStatus.INTERNAL_SERVER_ERROR)
     }
   }
 }

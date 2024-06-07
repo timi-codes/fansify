@@ -55,9 +55,9 @@ export class TradingService {
    * @param data the data to update
    */
   async findMany(
-    where: Prisma.TradeRequestWhereInput,
     { limit, offset }: IPaginationOptions,
     orderBy?: Prisma.TradeRequestOrderByWithRelationInput,
+    where?: Prisma.TradeRequestWhereInput,
   ) {
     return this.prismaService.tradeRequest.findMany({
       skip: offset,

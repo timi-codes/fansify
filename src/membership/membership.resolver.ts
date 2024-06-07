@@ -1,13 +1,16 @@
 import { HttpStatus, UseGuards } from '@nestjs/common';
-import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { Args, Int, Mutation, ObjectType, Query, Resolver } from '@nestjs/graphql';
 import { AccessTokenGuard, RolesGuard } from 'src/auth/guards';
-import { ISuccessResponse, JoiValidationPipe, Roles, Role, CurrentUser, SuccessResponseModel, MembershipStatus, IPagedRequest, createSuccessResponse } from '../common';
+import { ISuccessResponse, JoiValidationPipe, Roles, Role, CurrentUser, SuccessResponseModel, MembershipStatus, IPagedRequest, createSuccessResponse, DEFAULT_PAGE_LIMIT, DEFAULT_PAGE_OFFSET } from '../common';
 import { CreateMembershipSchema } from './schema';
 import { CreateMembershipInput } from './inputs';
 import { MembershipService } from './membership.service';
 import { WalletService } from 'src/wallet';
 import { Membership } from '@prisma/client';
-import { PagedMembershipsModel } from './model';
+import { MembershipModel, PagedMembershipsModel } from './model';
+
+@ObjectType()
+class MembershipSuccessResponse extends SuccessResponseModel<Membership>(MembershipModel) { }
 
 @Resolver()
 export class MembershipResolver {
@@ -19,8 +22,12 @@ export class MembershipResolver {
     /**
      *  Create single or multiple memberships.
      * @param payload The data required to create a new membership
+     * @param creator The user data object containing the current user's ID
+     * @returns The created membership record
+     * 
+     * @throws an error if the membership record could not be created
      */
-    @Mutation(() => SuccessResponseModel<Membership[]>, {
+    @Mutation(() => MembershipSuccessResponse, {
         description: 'Create single or multiple memberships.'
     })
     @UseGuards(AccessTokenGuard, RolesGuard)
@@ -32,11 +39,11 @@ export class MembershipResolver {
     ): Promise<ISuccessResponse<Membership[]>> {
    
         try {
-            const trxHash = await this.walletService.mintWaves(creator.id, payload)
-            if (!trxHash) {
+            const mintReceipt = await this.walletService.mintWaves(creator.id, payload)
+            if (!mintReceipt.trxHash) {
                 return createSuccessResponse(false, 'Failed to mint membership', HttpStatus.INTERNAL_SERVER_ERROR);
             }
-            const memberships = await this.membershipService.createMany(payload, creator.id, trxHash)
+            const memberships = await this.membershipService.createMany(payload, creator.id, mintReceipt)
             return createSuccessResponse(true, 'Membership created successfully', HttpStatus.CREATED, memberships);
 
         } catch (e) {
@@ -51,6 +58,10 @@ export class MembershipResolver {
      *
      * @param limit The maximum number of items to return
      * @param offset The index of the first item to return.
+     * @param status The status of the membership.
+     * @returns The membership records
+     * 
+     * @throws an error if the membership records could not be retrieved
      */
     @Query(() => PagedMembershipsModel, { description: "Retrieve all memberships" })
     @UseGuards(AccessTokenGuard)
@@ -58,21 +69,18 @@ export class MembershipResolver {
         @Args('limit', {
             description: 'The maximum number of items to return',
             type: () => Int,
-            nullable: true,
-            defaultValue: 20
+            defaultValue: DEFAULT_PAGE_LIMIT
         })
         limit: number,
         @Args('offset', {
             description: 'The index of the first item to return.',
             type: () => Int,
-            nullable: true,
-            defaultValue: 0
+            defaultValue: DEFAULT_PAGE_OFFSET
         })
         offset: number,
         @Args('status', {
             description: 'The status of the membership. ',
             type: () => MembershipStatus,
-            nullable: true,
             defaultValue: null
         })
         status: string,
@@ -106,20 +114,19 @@ export class MembershipResolver {
         @Args('limit', {
             description: 'The maximum number of items to return',
             type: () => Int,
-            defaultValue: 20
+            defaultValue: DEFAULT_PAGE_LIMIT
         })
         limit: number,
         @Args('offset', {
             description: 'The index of the first item to return.',
             type: () => Int,
-            defaultValue: 0
+            defaultValue: DEFAULT_PAGE_OFFSET
         })
         offset: number,
         @Args('status', {
             description: 'The status of the membership. ',
             type: () => MembershipStatus,
             nullable: true,
-            defaultValue: null
         })
         status: string,
         @CurrentUser() user: { id: number },

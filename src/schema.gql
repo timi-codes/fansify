@@ -53,6 +53,9 @@ type MembershipModel {
   """The unique identifier for a membership."""
   collectionTag: String
 
+  """The onchain membership id"""
+  tokenId: String
+
   """The description of the membership."""
   name: String!
 
@@ -74,10 +77,10 @@ type MembershipModel {
   """The date the user was created."""
   createdAt: Timestamp!
 
-  """The wallet address of owner"""
+  """The id of owner"""
   ownerId: Int!
 
-  """The wallet address of the creator"""
+  """The id of the creator"""
   creatorId: Int!
 }
 
@@ -101,16 +104,55 @@ type PagedMembershipsModel {
   data: [MembershipModel!]!
 }
 
+type SuccessResponse {
+  """The HTTP status of the response."""
+  statusCode: Int!
+
+  """Determines whether the server action was successful."""
+  isSuccess: Boolean!
+
+  """Contextual message describing what happened."""
+  message: String!
+
+  """Additional data returned from the server."""
+  data: MembershipModel
+}
+
 """"""
 type TradeRequestModel {
+  """The ID of the trade request."""
+  id: Int!
+
+  """The status of the trade request."""
+  status: TradeStatus!
+
   """The date that the trade request was made."""
   createdAt: Timestamp!
+
+  """The date that the trade request was update."""
+  updatedAt: Timestamp!
 
   """Data about the offered membership."""
   offered: MembershipModel!
 
   """Data about the requested membership."""
-  requested: MembershipModel!
+  userId: Int!
+
+  """Data about the offered membership."""
+  offeredId: Int!
+
+  """Data about the requested membership."""
+  requestedId: Int!
+
+  """The onchain transaction hash for token exchange."""
+  trxHash: String!
+}
+
+enum TradeStatus {
+  PENDING
+  REJECTED
+  ACCEPTED
+  CANCELLED
 }
 
 """"""
@@ -128,6 +170,62 @@ type PagedTradeRequestsModel {
   data: [TradeRequestModel!]!
 }
 
+type MembershipSuccessResponse {
+  """The HTTP status of the response."""
+  statusCode: Int!
+
+  """Determines whether the server action was successful."""
+  isSuccess: Boolean!
+
+  """Contextual message describing what happened."""
+  message: String!
+
+  """Additional data returned from the server."""
+  data: MembershipModel
+}
+
+type AcceptTradeSuccessResponse {
+  """The HTTP status of the response."""
+  statusCode: Int!
+
+  """Determines whether the server action was successful."""
+  isSuccess: Boolean!
+
+  """Contextual message describing what happened."""
+  message: String!
+
+  """Additional data returned from the server."""
+  data: TradeRequestModel
+}
+
+type DeclineTradeSuccessResponse {
+  """The HTTP status of the response."""
+  statusCode: Int!
+
+  """Determines whether the server action was successful."""
+  isSuccess: Boolean!
+
+  """Contextual message describing what happened."""
+  message: String!
+
+  """Additional data returned from the server."""
+  data: TradeRequestModel
+}
+
+type RequestTradeSuccessResponse {
+  """The HTTP status of the response."""
+  statusCode: Int!
+
+  """Determines whether the server action was successful."""
+  isSuccess: Boolean!
+
+  """Contextual message describing what happened."""
+  message: String!
+
+  """Additional data returned from the server."""
+  data: TradeRequestModel
+}
+
 type Query {
   """Get the current user's profile."""
   profile: UserModel!
@@ -135,22 +233,25 @@ type Query {
   """Retrieve all the trade requests."""
   tradeRequests(
     """The maximum number of items to return"""
-    limit: Int
+    limit: Int! = 20
 
     """The index of the first item to return."""
-    offset: Int
+    offset: Int! = 0
+
+    """The status of the trade request. """
+    status: TradeStatus
   ): PagedTradeRequestsModel!
 
   """Retrieve all memberships"""
   fetchAllMembership(
     """The maximum number of items to return"""
-    limit: Int = 20
+    limit: Int! = 20
 
     """The index of the first item to return."""
-    offset: Int = 0
+    offset: Int! = 0
 
     """The status of the membership. """
-    status: MembershipStatus = null
+    status: MembershipStatus!
   ): PagedMembershipsModel!
 
   """Retrieve current user's memberships"""
@@ -162,7 +263,7 @@ type Query {
     offset: Int! = 0
 
     """The status of the membership. """
-    status: MembershipStatus = null
+    status: MembershipStatus
   ): PagedMembershipsModel!
 }
 
@@ -183,7 +284,7 @@ type Mutation {
   buyMemberships(
     """The ID of the membership."""
     id: Int!
-  ): SuccessResponseModel!
+  ): SuccessResponse!
 
   """
   Accept the trade of owned membership with another user’s owned membership.
@@ -191,7 +292,7 @@ type Mutation {
   acceptTrade(
     """The ID of the trade."""
     id: Int!
-  ): SuccessResponseModel!
+  ): AcceptTradeSuccessResponse!
 
   """
   Decline the trade of owned membership with another user’s owned membership.
@@ -199,7 +300,7 @@ type Mutation {
   declineTrade(
     """The ID of the trade request."""
     id: Int!
-  ): SuccessResponseModel!
+  ): DeclineTradeSuccessResponse!
 
   """Request a trade for a membership."""
   requestTrade(
@@ -208,10 +309,10 @@ type Mutation {
 
     """The ID of the membership that the user is offering to trade."""
     offeredId: Int!
-  ): SuccessResponseModel!
+  ): RequestTradeSuccessResponse!
 
   """Create single or multiple memberships."""
-  createMembership(payload: CreateMembershipInput!): SuccessResponseModel!
+  createMembership(payload: CreateMembershipInput!): MembershipSuccessResponse!
 }
 
 """The data fields required to create a user."""
@@ -230,20 +331,6 @@ input CreateUserInput {
 The user role. Accepts the following values: "general", "creator"
 """
 scalar Role
-
-"""
-A response model, containing the state of the response from the server.
-"""
-type SuccessResponseModel {
-  """The HTTP status of the response."""
-  statusCode: Int!
-
-  """Determines whether the server action was successful."""
-  isSuccess: Boolean!
-
-  """Contextual message describing what happened."""
-  message: String!
-}
 
 """The data fields required to create a membership."""
 input CreateMembershipInput {
