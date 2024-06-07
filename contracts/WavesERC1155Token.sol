@@ -17,6 +17,9 @@ contract WavesERC1155Token is Initializable, ERC1155Upgradeable, OwnableUpgradea
     uint256 public maxWavePerCreator;
     mapping(address => mapping(uint256 => uint256)) public tokensMintedByCreator;
 
+    event ExchangeWave(address requester, address responder, uint256 requesterTokenId, uint256 responderTokenId);
+    event MaxWavePerCreatorUpdated(uint256 maxWavePerCreator);
+
     function initialize(string memory _uri, address account, uint256 _maxWavePerCreator) public initializer {
         __ERC1155_init(_uri);
         __Ownable_init(account);
@@ -37,15 +40,20 @@ contract WavesERC1155Token is Initializable, ERC1155Upgradeable, OwnableUpgradea
         }
     }
 
-    function exchangeWave(address from, address to, uint256 id, uint256 amount) public {
-        require(balanceOf(from, id) >= amount, "Insufficient balance");
-        safeTransferFrom(from, to, id, amount, "");
-        tokensMintedByCreator[from][id] -= amount;
-        tokensMintedByCreator[to][id] += amount;
+    function exchangeWave(address requester, address responder, uint256 requesterTokenId, uint256 responderTokenId) public onlyOwner {
+        require(balanceOf(requester, requesterTokenId) >= 1, "Insufficient requester balance");
+        require(balanceOf(requester, responderTokenId) >= 1, "Insufficient responder balance");
+
+        safeTransferFrom(requester, responder, requesterTokenId, 1, "");
+        safeTransferFrom(responder, requester, responderTokenId, 1, "");
+
+        emit ExchangeWave(requester, responder, requesterTokenId, responderTokenId);
     }
 
     function setMaxWavePerCreator(uint256 _maxWavePerCreator) external onlyOwner {
         maxWavePerCreator = _maxWavePerCreator;
+
+        emit MaxWavePerCreatorUpdated(_maxWavePerCreator);
     }
 
     function uri(uint256 id) public view override returns (string memory) {

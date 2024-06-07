@@ -69,7 +69,7 @@ export class MembershipService {
         return memberships.length > 0 ? true : false;
     }
 
-    async findByIds(ids: number[], include?: Prisma.MembershipInclude): Promise<Membership[]> {
+    async findByIds(ids: number[], include?: Prisma.MembershipInclude): Promise<MembershipWithInclude[]> {
         return this.prismaService.membership.findMany({
             where: { id: { in: ids } },
             include

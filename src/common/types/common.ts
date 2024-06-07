@@ -40,6 +40,6 @@ export interface IPaginationOptions {
 }
 
 const membershipWithInclude = Prisma.validator<Prisma.MembershipDefaultArgs>()({
-    include: { creator: true }
+    include: { creator: true, owner: true }
 });
 export type MembershipWithInclude = Prisma.MembershipGetPayload<typeof membershipWithInclude>;

@@ -111,7 +111,7 @@ export class TradingResolver {
       type: () => Int,
     })
     id: number,
-    @CurrentUser() user: { id: number },
+    @CurrentUser() currentUser: { id: number },
   ): Promise<ISuccessResponse> {
 
     //check if trade exists
@@ -134,21 +134,19 @@ export class TradingResolver {
         { creator: true }
       )
 
-      if (requestedMembership.ownerId != user.id) {
+      if (requestedMembership.ownerId != currentUser.id) {
         return createSuccessResponse(false, 'You are not allowed to perform this action.', HttpStatus.UNAUTHORIZED)
       }
 
-      console.log('requestedMembership', requestedMembership)
+      const requesterHasWave = await this.walletService.hasWave(trade.user.walletAddress, offeredMembership.creatorId, offeredMembership.collectionTag);
+      if (!requesterHasWave) {
+        return createSuccessResponse(false, 'Requester does not own the offered membership.', HttpStatus.UNAUTHORIZED)
+      }
 
-      // const requesterHasWave = await this.walletService.hasWave(trade.user.walletAddress, offeredMembership.creator.walletAddress, offeredMembership.collectionTag);
-      // if (!requesterHasWave) {
-      //   return createSuccessResponse(false, 'Requester does not own the offered membership.', HttpStatus.UNAUTHORIZED)
-      // }
-
-      // const ownerHasWave = await this.walletService.hasWave(requestedMembership.owner.walletAddress, requestedMembership.creator.walletAddress, requestedMembership.collectionTag);
-      // if (!ownerHasWave) {
-      //   return createSuccessResponse(false, 'You do not own the requested membership.', HttpStatus.UNAUTHORIZED)
-      // }
+      const ownerHasWave = await this.walletService.hasWave(requestedMembership.owner.walletAddress, requestedMembership.creatorId, requestedMembership.collectionTag);
+      if (!ownerHasWave) {
+        return createSuccessResponse(false, 'You do not own the requested membership.', HttpStatus.UNAUTHORIZED)
+      }
 
 
 
