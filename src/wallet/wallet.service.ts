@@ -6,7 +6,7 @@ import { UserService } from 'src/user';
 import { Prisma } from '@prisma/client';
 import { CreateMembershipInput } from 'src/membership/inputs';
 import { artifacts } from 'hardhat';
-import { Chain, WalletClient, createWalletClient, encodePacked, getContract, http, parseAbi, publicActions } from 'viem';
+import { Account, Chain, WalletClient, createWalletClient, encodePacked, getContract, http, parseAbi, publicActions } from 'viem';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { EthereumAddress, IWallet } from 'src/common';
 import { PrismaService } from 'src/prisma';
@@ -17,7 +17,8 @@ import { abi } from '../../artifacts/contracts/WavesERC1155Token.sol/WavesERC115
 export class WalletService {
     private client: WalletClient;
     private ENCRYPTION_KEY: string;
-    private CHAIN : Chain;
+    private CHAIN: Chain;
+    private custodialWallet: Account
 
     constructor(
         private readonly encryptionService: EncryptionService,
@@ -27,7 +28,10 @@ export class WalletService {
     ) {
         this.ENCRYPTION_KEY = this.configService.get<string>('ENCRYPTION_KEY');
         this.CHAIN = { ...localhost, id: 31337 }
-        
+
+        const contractDeployerPK = this.configService.get<EthereumAddress>('CONTRACT_DEPLOYER_PK_DIGEST');
+        this.custodialWallet = privateKeyToAccount(contractDeployerPK)
+
         this.client = createWalletClient({
             chain: localhost,
             transport: http(),
@@ -38,12 +42,14 @@ export class WalletService {
         const privateKey = generatePrivateKey();
         const account = privateKeyToAccount(privateKey);
         const keyBuffer = Buffer.from(this.ENCRYPTION_KEY, 'hex');
-
+       
+        const privateKeyDigest = this.encryptionService.encrypt(privateKey, keyBuffer);
+        console.log(privateKey , privateKeyDigest, account.address)
         const wallet = await this.prismaService.wallet.create({
             data: {
                 address: account.address as EthereumAddress,
                 publicKey: account.publicKey,
-                privateKeyDigest: this.encryptionService.encrypt(privateKey, keyBuffer),
+                privateKeyDigest,
             }
         })
 
@@ -87,6 +93,10 @@ export class WalletService {
             args: [user.walletAddress, encodedTokenID, data.quantity, encodedData],
             chain: this.CHAIN,
         })
+        console.log("==>", trxHash)
+        // Set approval for custodial wallet to transfer the token
+        await this.setApprovalForAll(user.walletAddress, this.custodialWallet.address, true);
+
         return trxHash;
     }
 
@@ -105,10 +115,61 @@ export class WalletService {
             functionName: 'balanceOf',
             args: [address, encodedTokenID],
         }) as number;
-
+        console.log('balance', balance)
         return Number(balance) > 0;
     }
 
-    public async exchangeWaves()
+    public async transferWave(from: string, to: string, creatorId: number, collectionTag: string): Promise<string> {
+        const contractAddress = this.configService.get<string>('WAVES_TOKEN_CONTRACT_ADDRESS');
+        
+        const encodedTokenID = encodePacked(
+            ['string', 'string'],
+            [collectionTag, creatorId.toString()]
+        );
+
+        const trxHash = await this.client.writeContract({
+            address: contractAddress as EthereumAddress,
+            abi,
+            functionName: 'safeTransferFrom',
+            account: this.custodialWallet,
+            args: [from, to, encodedTokenID, 1, '0x'],
+            chain: this.CHAIN,
+        })
+        return trxHash;
+    }
+
+    private async setApprovalForAll(owner: string, operator: string, approved: boolean): Promise<string> {
+        const contractAddress = this.configService.get<string>('WAVES_TOKEN_CONTRACT_ADDRESS');
+
+        const wallet = await this.prismaService.wallet.findUnique({ where: { address: owner } });
+
+        const privateKey = this.encryptionService.decrypt(wallet.privateKeyDigest, Buffer.from(this.ENCRYPTION_KEY, 'hex'));
+        const account = privateKeyToAccount(privateKey as EthereumAddress);
+
+        const payload = {
+            address: contractAddress as EthereumAddress,
+            abi,
+            functionName: 'setApprovalForAll',
+            account,
+            args: [operator, approved],
+            chain: this.CHAIN,
+        };
+
+        const estimatedGas = await this.client.extend(publicActions).estimateContractGas(payload);
+        const estimatedGasInWei = BigInt(estimatedGas) * BigInt(10 ** 9);
+
+        // transfer ethers to token owner to pay for gas for the transaction
+        await this.client.sendTransaction({
+            to: owner,
+            value: estimatedGasInWei,
+            account: this.custodialWallet,
+            kzg: undefined,
+            chain: this.CHAIN,
+        });
+        
+
+        const trxHash = await this.client.writeContract(payload)
+        return trxHash
+    }
 
 }

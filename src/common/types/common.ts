@@ -1,4 +1,5 @@
 import { registerEnumType } from "@nestjs/graphql";
+import { Prisma } from "@prisma/client";
 
 export enum Role { 
     General = 'general',
@@ -37,3 +38,8 @@ export interface IPaginationOptions {
     limit: number;
     offset: number;
 }
+
+const membershipWithInclude = Prisma.validator<Prisma.MembershipDefaultArgs>()({
+    include: { creator: true }
+});
+export type MembershipWithInclude = Prisma.MembershipGetPayload<typeof membershipWithInclude>;

@@ -1,10 +1,19 @@
 import { Args, Int, Mutation, Resolver } from '@nestjs/graphql';
-import { CurrentUser, ISuccessResponse, SuccessResponseModel } from '../common';
+import { CurrentUser, ISuccessResponse, MembershipStatus, SuccessResponseModel, createSuccessResponse } from '../common';
 import { HttpStatus, UseGuards } from '@nestjs/common';
 import { AccessTokenGuard } from '../auth/guards';
+import { MembershipService } from 'src/membership/membership.service';
+import { WalletService } from 'src/wallet';
+import { UserService } from 'src/user';
 
 @Resolver()
 export class PaymentResolver {
+  constructor(
+    private membershipService: MembershipService,
+    private walletService: WalletService,
+    private userService: UserService,
+  ) { }
+  
   /**
    * Buy a membership from a creator
    *
@@ -22,12 +31,45 @@ export class PaymentResolver {
       type: () => Int,
     })
     id: number,
-    @CurrentUser() user: { id: number },
+    @CurrentUser() currentUser: { id: number },
   ): Promise<ISuccessResponse> {
-    return {
-      isSuccess: false,
-      message: 'Not yet implemented',
-      statusCode: HttpStatus.NOT_IMPLEMENTED,
-    };
+
+    try {
+
+      const membership = await this.membershipService.findOne({ id, status: MembershipStatus.UNSOLD }, { creator: true });
+      if (!membership) {
+        return createSuccessResponse(false, 'Membership not found or has been sold', HttpStatus.NOT_FOUND);
+      }
+
+      console.log('membership', membership)
+
+      const isWaveAvailable = await this.walletService.hasWave(membership.creator.walletAddress, membership.creatorId, membership.collectionTag);
+      if (!isWaveAvailable) {
+        return createSuccessResponse(false, 'Creator does not have enough membership to sell', HttpStatus.BAD_REQUEST);
+      }
+
+      const user = await this.userService.findOne({ id: currentUser.id });
+
+      const trxHash = await this.walletService.transferWave(membership.creator.walletAddress, user.walletAddress, membership.creatorId, membership.collectionTag);
+
+      if (!trxHash) {
+        return createSuccessResponse(false, 'Failed to buy membership', HttpStatus.INTERNAL_SERVER_ERROR);
+      }
+
+      const updatedMembership = await this.membershipService.update({ id }, { 
+        owner: { connect: { id: currentUser.id } },
+        status: MembershipStatus.SOLD
+      });
+      
+      return createSuccessResponse(true, 'Membership bought successfully', HttpStatus.OK, updatedMembership);
+
+    } catch (e) {
+      console.error('Error buying membership', e);
+      return {
+        isSuccess: false,
+        message: 'Not yet implemented',
+        statusCode: e,
+      };
+    }
   }
 }

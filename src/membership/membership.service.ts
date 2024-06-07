@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma';
 import { Prisma, User, Membership } from '@prisma/client';
 import { CreateMembershipInput } from './inputs';
-import { IPaginationOptions } from 'src/common';
+import { IPaginationOptions, MembershipWithInclude } from 'src/common';
 
 @Injectable()
 export class MembershipService {
@@ -27,7 +27,7 @@ export class MembershipService {
      *
      * @param where the options to use to filter the search:
      */
-    async findOne(where?: Prisma.MembershipWhereInput, include?: Prisma.MembershipInclude): Promise<Membership> {
+    async findOne(where?: Prisma.MembershipWhereInput, include?: Prisma.MembershipInclude): Promise<MembershipWithInclude> {
         return this.prismaService.membership.findFirst({ where, include });
     }
 
@@ -73,6 +73,22 @@ export class MembershipService {
         return this.prismaService.membership.findMany({
             where: { id: { in: ids } },
             include
+        });
+    }
+
+    /**
+     * Update the membership record.
+     *
+     * @param where the where clause options
+     * @param data the data to update
+     */
+    async update(
+        where: Prisma.MembershipWhereUniqueInput,
+        data: Prisma.MembershipUpdateInput,
+    ) {
+        return this.prismaService.membership.update({
+            where,
+            data,
         });
     }
 }

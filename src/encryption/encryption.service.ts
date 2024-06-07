@@ -51,7 +51,7 @@ export class EncryptionService {
       const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
       let encrypted = cipher.update(text, 'utf8', 'hex');
       encrypted += cipher.final('hex');
-      return encrypted;
+      return iv.toString('hex') + encrypted; // Prepend the IV to the encrypted data
     } catch (error) {
       console.error('Encrypt failed.');
       throw new Error(`encrypt: ${error}`);
@@ -66,8 +66,10 @@ export class EncryptionService {
    */
   public decrypt(text: string, key: Buffer): string {
     try {
-      const decipher = crypto.createDecipheriv('aes-256-cbc', key, Buffer.alloc(16, 0));
-      let decrypted = decipher.update(text, 'hex', 'utf8');
+      const iv = Buffer.from(text.slice(0, 32), 'hex'); // Extract the IV from the encrypted data
+      const encryptedText = text.slice(32); // The rest is the encrypted data
+      const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
+      let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
       decrypted += decipher.final('utf8');
       return decrypted;
     } catch (error) {
