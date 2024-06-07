@@ -1,5 +1,4 @@
 import { Role } from "../types";
-import { defineChain } from "viem";
 
 export const Environment = {
   Development: 'development',

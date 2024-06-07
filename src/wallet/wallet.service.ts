@@ -11,7 +11,7 @@ import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { EthereumAddress, IWallet, MembershipWithInclude, MintReceipt, TokenExchangePayload } from 'src/common';
 import { PrismaService } from 'src/prisma';
 import { localhost } from 'viem/chains';
-import { abi } from '../../artifacts/contracts/WavesERC1155Token.sol/WavesERC1155Token.json';
+import { abi } from '../common/constants/WavesERC1155Token.json';
 
 @Injectable()
 export class WalletService {
