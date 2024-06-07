@@ -39,7 +39,7 @@ export class TradingService {
    */
   async update(
     where: Prisma.TradeRequestWhereUniqueInput,
-    data: { status: string, trxHash: string },
+    data: Prisma.TradeRequestUpdateInput,
   ) {
     return this.prismaService.tradeRequest.update({
       where,
