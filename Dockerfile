@@ -3,11 +3,13 @@ FROM node:18-alpine as base
 
 WORKDIR /user/src/app
 
-COPY package.json yarn.lock ./
+COPY package.json yarn.lock hardhat.config.js ./
 COPY prisma ./prisma/
 RUN yarn install
+RUN yarn contracts:compile
 
 COPY . .
+
 
 # Creating a build:
 FROM node:18-alpine as create-build
