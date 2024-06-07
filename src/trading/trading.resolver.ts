@@ -185,6 +185,10 @@ export class TradingResolver {
         return createSuccessResponse(false, 'Trade request not found.', HttpStatus.NOT_FOUND)
       }
 
+      if (trade.status != TradeStatus.PENDING) {
+        return createSuccessResponse(false, `Trade request has already been ${trade.status.toLowerCase()}`, HttpStatus.BAD_REQUEST)
+      }
+
       if (trade.requested.ownerId != user.id) {
         return createSuccessResponse(false, 'You are not allowed to perform this action.', HttpStatus.UNAUTHORIZED)
       }
