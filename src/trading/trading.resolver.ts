@@ -113,36 +113,51 @@ export class TradingResolver {
     id: number,
     @CurrentUser() user: { id: number },
   ): Promise<ISuccessResponse> {
-    const currentUser = await this.userService.validateRole(user.id, [Role.General]);
 
-    if (!currentUser) {
-      throw new GraphQLException(
-        'You are not allowed to perform this action.',
-        {
-          extensions: {
-            http: {
-              status: HttpStatus.UNAUTHORIZED,
-            },
-          },
-        },
-      );
-    }
+    //check if trade exists
+    //check if trade is pending
+    //check if user is the owner of the requested membership
+    //update trade status to accepted
 
     try {
-      const data = await this.tradingService.update(
-        {
-          id,
-          userId: currentUser.id,
-        },
-        { status: 'accepted' },
-      );
+      const trade = await this.tradingService.findOne({ id });
+      if (!trade) {
+        return createSuccessResponse(false, 'Trade request not found.', HttpStatus.NOT_FOUND)
+      }
+
+      if (trade.status != TradeStatus.PENDING) {
+        return createSuccessResponse(false, `Trade request has already been ${trade.status.toLowerCase()}`, HttpStatus.BAD_REQUEST)
+      }
+
+      const [requestedMembership, offeredMembership] = await this.membershipService.findByIds([
+        trade.requestedId, trade.offeredId],
+        { creator: true }
+      )
+
+      if (requestedMembership.ownerId != user.id) {
+        return createSuccessResponse(false, 'You are not allowed to perform this action.', HttpStatus.UNAUTHORIZED)
+      }
+
+      console.log('requestedMembership', requestedMembership)
+
+      // const requesterHasWave = await this.walletService.hasWave(trade.user.walletAddress, offeredMembership.creator.walletAddress, offeredMembership.collectionTag);
+      // if (!requesterHasWave) {
+      //   return createSuccessResponse(false, 'Requester does not own the offered membership.', HttpStatus.UNAUTHORIZED)
+      // }
+
+      // const ownerHasWave = await this.walletService.hasWave(requestedMembership.owner.walletAddress, requestedMembership.creator.walletAddress, requestedMembership.collectionTag);
+      // if (!ownerHasWave) {
+      //   return createSuccessResponse(false, 'You do not own the requested membership.', HttpStatus.UNAUTHORIZED)
+      // }
+
+
 
       return {
         isSuccess: false,
         message:
           'Something weird happened. Please try again, and connect with us if it persists.',
         statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-        data: data,
+        data: {},
       };
     } catch (e) {
       console.error(`[acceptTrade mutation] ${e}`);

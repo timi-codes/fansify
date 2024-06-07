@@ -109,4 +109,6 @@ export class WalletService {
         return Number(balance) > 0;
     }
 
+    public async exchangeWaves()
+
 }

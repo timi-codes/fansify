@@ -37,6 +37,13 @@ contract WavesERC1155Token is Initializable, ERC1155Upgradeable, OwnableUpgradea
         }
     }
 
+    function exchangeWave(address from, address to, uint256 id, uint256 amount) public {
+        require(balanceOf(from, id) >= amount, "Insufficient balance");
+        safeTransferFrom(from, to, id, amount, "");
+        tokensMintedByCreator[from][id] -= amount;
+        tokensMintedByCreator[to][id] += amount;
+    }
+
     function setMaxWavePerCreator(uint256 _maxWavePerCreator) external onlyOwner {
         maxWavePerCreator = _maxWavePerCreator;
     }
