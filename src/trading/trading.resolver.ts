@@ -114,11 +114,6 @@ export class TradingResolver {
     @CurrentUser() currentUser: { id: number },
   ): Promise<ISuccessResponse> {
 
-    //check if trade exists
-    //check if trade is pending
-    //check if user is the owner of the requested membership
-    //update trade status to accepted
-
     try {
       const trade = await this.tradingService.findOne({ id });
       if (!trade) {
@@ -129,44 +124,32 @@ export class TradingResolver {
         return createSuccessResponse(false, `Trade request has already been ${trade.status.toLowerCase()}`, HttpStatus.BAD_REQUEST)
       }
 
-      const [requestedMembership, offeredMembership] = await this.membershipService.findByIds([
+      const [requested, offered] = await this.membershipService.findByIds([
         trade.requestedId, trade.offeredId],
         { creator: true }
       )
 
-      if (requestedMembership.ownerId != currentUser.id) {
+      if (requested.ownerId != currentUser.id) {
         return createSuccessResponse(false, 'You are not allowed to perform this action.', HttpStatus.UNAUTHORIZED)
       }
 
-      const requesterHasWave = await this.walletService.hasWave(trade.user.walletAddress, offeredMembership.creatorId, offeredMembership.collectionTag);
-      if (!requesterHasWave) {
-        return createSuccessResponse(false, 'Requester does not own the offered membership.', HttpStatus.UNAUTHORIZED)
+      const trxHash = await this.walletService.exchangeWave(requested, offered)
+      if (!trxHash) {
+        return createSuccessResponse(false, 'Failed to accept trade', HttpStatus.INTERNAL_SERVER_ERROR)
       }
 
-      const ownerHasWave = await this.walletService.hasWave(requestedMembership.owner.walletAddress, requestedMembership.creatorId, requestedMembership.collectionTag);
-      if (!ownerHasWave) {
-        return createSuccessResponse(false, 'You do not own the requested membership.', HttpStatus.UNAUTHORIZED)
-      }
+      await Promise.all([
+        this.membershipService.update({ id: requested.id }, { owner: { connect: { id: offered.ownerId } } }),
+        this.membershipService.update({ id: offered.id }, { owner: { connect: { id: requested.ownerId } } }),
+      ])
 
+      const data = await this.tradingService.update({ id }, { status: TradeStatus.ACCEPTED, trxHash });
 
-
-      return {
-        isSuccess: false,
-        message:
-          'Something weird happened. Please try again, and connect with us if it persists.',
-        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-        data: {},
-      };
+      return createSuccessResponse(true, 'Trade request has been successfully accepted.', HttpStatus.OK, data);
+    
     } catch (e) {
       console.error(`[acceptTrade mutation] ${e}`);
-
-      return {
-        isSuccess: false,
-        message:
-          'Something weird happened. Please try again, and connect with us if it persists.',
-        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-        data: null,
-      };
+      return createSuccessResponse(false, 'Something weird happened. Please try again, and connect with us if it persists.', HttpStatus.INTERNAL_SERVER_ERROR)
     }
   }
 

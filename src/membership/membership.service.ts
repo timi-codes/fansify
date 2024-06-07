@@ -1,20 +1,21 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma';
-import { Prisma, User, Membership } from '@prisma/client';
+import { Prisma, Membership } from '@prisma/client';
 import { CreateMembershipInput } from './inputs';
-import { IPaginationOptions, MembershipWithInclude } from 'src/common';
+import { IPaginationOptions, MembershipWithInclude, MintReceipt } from 'src/common';
 
 @Injectable()
 export class MembershipService {
     constructor(private readonly prismaService: PrismaService) { }
 
-    async createMany(data: CreateMembershipInput, creatorId: number, trxHash: string): Promise<Membership[]> { 
+    async createMany(data: CreateMembershipInput, creatorId: number, mintReceipt: MintReceipt): Promise<Membership[]> { 
         return Promise.all(Array.from({ length: data.quantity }, async (_, id) => {
             const { quantity, ...membership } = data;
             return this.prismaService.membership.create({
                 data: {
                     ...membership,
-                    trxHash,
+                    trxHash: mintReceipt.trxHash,
+                    tokenId: mintReceipt.tokenId,
                     creator: { connect: { id: creatorId }, },
                     owner: { connect: { id: creatorId }, },
                 }

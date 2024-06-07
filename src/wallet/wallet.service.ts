@@ -8,7 +8,7 @@ import { CreateMembershipInput } from 'src/membership/inputs';
 import { artifacts } from 'hardhat';
 import { Account, Chain, WalletClient, createWalletClient, encodePacked, getContract, http, parseAbi, publicActions } from 'viem';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
-import { EthereumAddress, IWallet } from 'src/common';
+import { EthereumAddress, IWallet, MembershipWithInclude, MintReceipt, TokenExchangePayload } from 'src/common';
 import { PrismaService } from 'src/prisma';
 import { localhost } from 'viem/chains';
 import { abi } from '../../artifacts/contracts/WavesERC1155Token.sol/WavesERC1155Token.json';
@@ -67,7 +67,7 @@ export class WalletService {
         return wallet;
     }
 
-    public async mintWaves(creatorId: number, data: CreateMembershipInput): Promise<string> {
+    public async mintWaves(creatorId: number, data: CreateMembershipInput): Promise<MintReceipt> {
         const contractAddress = this.configService.get<string>('WAVES_TOKEN_CONTRACT_ADDRESS');
         const contractDeployerPKDigest = this.configService.get<EthereumAddress>('CONTRACT_DEPLOYER_PK_DIGEST');
         const artifact = await artifacts.readArtifact("WavesERC1155Token");
@@ -97,7 +97,7 @@ export class WalletService {
         // Set approval for custodial wallet to transfer the token
         await this.setApprovalForAll(user.walletAddress, this.custodialWallet.address, true);
 
-        return trxHash;
+        return { trxHash, tokenId: encodedTokenID };
     }
 
     public async hasWave(address: string, creatorId: number, collectionTag: string): Promise<boolean> {
@@ -135,6 +135,26 @@ export class WalletService {
             args: [from, to, encodedTokenID, 1, '0x'],
             chain: this.CHAIN,
         })
+        return trxHash;
+    }
+
+    public async exchangeWave(requested: MembershipWithInclude, offered: MembershipWithInclude): Promise<string> { 
+        const contractAddress = this.configService.get<string>('WAVES_TOKEN_CONTRACT_ADDRESS');
+
+        const trxHash = await this.client.writeContract({
+            address: contractAddress as EthereumAddress,
+            abi,
+            functionName: 'exchangeWave',
+            account: this.custodialWallet,
+            args: [
+                requested.owner.walletAddress,
+                offered.owner.walletAddress,
+                requested.tokenId,
+                offered.tokenId
+            ],
+            chain: this.CHAIN,
+        })
+
         return trxHash;
     }
 

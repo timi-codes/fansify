@@ -1,7 +1,7 @@
 import { HttpStatus, UseGuards } from '@nestjs/common';
 import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { AccessTokenGuard, RolesGuard } from 'src/auth/guards';
-import { ISuccessResponse, JoiValidationPipe, Roles, Role, CurrentUser, SuccessResponseModel, MembershipStatus, IPagedRequest } from '../common';
+import { ISuccessResponse, JoiValidationPipe, Roles, Role, CurrentUser, SuccessResponseModel, MembershipStatus, IPagedRequest, createSuccessResponse } from '../common';
 import { CreateMembershipSchema } from './schema';
 import { CreateMembershipInput } from './inputs';
 import { MembershipService } from './membership.service';
@@ -34,30 +34,14 @@ export class MembershipResolver {
         try {
             const trxHash = await this.walletService.mintWaves(creator.id, payload)
             if (!trxHash) {
-                return {
-                    isSuccess: false,
-                    message: 'Something went wrong while minting the token. Please try again.',
-                    statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-                }
+                return createSuccessResponse(false, 'Failed to mint membership', HttpStatus.INTERNAL_SERVER_ERROR);
             }
             const memberships = await this.membershipService.createMany(payload, creator.id, trxHash)
-            return {
-                isSuccess: true,
-                message: 'Successfully created your membership.',
-                statusCode: HttpStatus.CREATED,
-                data: memberships
-            }
+            return createSuccessResponse(true, 'Membership created successfully', HttpStatus.CREATED, memberships);
 
         } catch (e) {
             console.error(`[createMembership mutation] ${e}`);
-
-            return {
-                isSuccess: false,
-                message:
-                    'Something weird happened. Please try again, and connect with us if it persists.',
-                statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-                data: null,
-            };
+            return createSuccessResponse(false, 'Failed to create membership', HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
