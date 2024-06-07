@@ -18,8 +18,19 @@ export enum MembershipStatus {
     UNSOLD = 'UNSOLD',
 }
 
+export enum TradeStatus { 
+    PENDING = 'PENDING',
+    REJECTED = 'REJECTED',
+    ACCEPTED = 'ACCEPTED',
+    CANCELLED = 'CANCELLED',
+}
+
 registerEnumType(MembershipStatus, {
     name: 'MembershipStatus',
+});
+
+registerEnumType(TradeStatus, {
+    name: 'TradeStatus',
 });
 
 export interface IPaginationOptions {

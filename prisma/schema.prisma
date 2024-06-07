@@ -41,35 +41,42 @@ model Wallet {
 }
 
 model TradeRequest {
-  // 📝 Extend this model 
-
   id        Int      @id @default(autoincrement())
-  status    String?
+  status    String   @default("PENDING")
   userId    Int
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  requested   Membership @relation(name: "RequestedMembership", fields: [requestedId], references: [id])
+  requestedId Int
+
+  offered   Membership @relation(name: "OfferredMembership", fields: [offeredId], references: [id])
+  offeredId Int
+
   @@map("trade_requests")
 }
 
 model Membership {
-  id              Int @id @default(autoincrement())
-  name            String
-  description     String
-  price           Float
-  status          String   @default("UNSOLD")
-  trxHash         String   
-  collectionTag   String?
+  id            Int     @id @default(autoincrement())
+  name          String
+  description   String
+  price         Float
+  status        String  @default("UNSOLD")
+  trxHash       String
+  collectionTag String?
 
-  updatedAt       DateTime @default(now())
-  createdAt       DateTime @default(now())
+  updatedAt DateTime @default(now())
+  createdAt DateTime @default(now())
 
-  creator         User @relation(name: "MembershipCreator", fields: [creatorId], references: [id])
-  creatorId       Int
+  creator   User @relation(name: "MembershipCreator", fields: [creatorId], references: [id])
+  creatorId Int
 
-  owner           User @relation(name: "MembershipOwner", fields: [ownerId], references: [id])
-  ownerId         Int
+  owner        User           @relation(name: "MembershipOwner", fields: [ownerId], references: [id])
+  ownerId      Int
+
+  tradeRequests TradeRequest[] @relation(name: "RequestedMembership")
+  tradeOffers   TradeRequest[] @relation(name: "OfferredMembership")
 
   @@map("memberships")
 }

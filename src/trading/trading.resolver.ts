@@ -6,6 +6,7 @@ import {
   Role,
   Roles,
   SuccessResponseModel,
+  TradeStatus,
   createSuccessResponse,
 } from '../common';
 import { HttpStatus, UseGuards } from '@nestjs/common';
@@ -167,7 +168,8 @@ export class TradingResolver {
     description:
       'Decline the trade of owned membership with another user’s owned membership.',
   })
-  @UseGuards(AccessTokenGuard)
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  @Roles(Role.General)
   async declineTrade(
     @Args('id', {
       description: 'The ID of the trade request.',
@@ -176,37 +178,20 @@ export class TradingResolver {
     id: number,
     @CurrentUser() user: { id: number },
   ): Promise<ISuccessResponse> {
-    const currentUser = await this.userService.validateRole(user.id, [Role.General]);
-
-    if (!currentUser) {
-      throw new GraphQLException(
-        'You are not allowed to perform this action.',
-        {
-          extensions: {
-            http: {
-              status: HttpStatus.UNAUTHORIZED,
-            },
-          },
-        },
-      );
-    }
 
     try {
-      const data = await this.tradingService.update(
-        {
-          id,
-          userId: currentUser.id,
-        },
-        { status: 'accepted' },
-      );
+      const trade = await this.tradingService.findOne({ id }, { requested: true });
+      if (!trade) {
+        return createSuccessResponse(false, 'Trade request not found.', HttpStatus.NOT_FOUND)
+      }
 
-      return {
-        isSuccess: false,
-        message:
-          'Something weird happened. Please try again, and connect with us if it persists.',
-        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-        data: data,
-      };
+      if (trade.requested.ownerId != user.id) {
+        return createSuccessResponse(false, 'You are not allowed to perform this action.', HttpStatus.UNAUTHORIZED)
+      }
+
+      const data = await this.tradingService.update({ id }, { status: TradeStatus.REJECTED });
+
+      return createSuccessResponse(true, 'Trade request has been successfully declined.', HttpStatus.OK, data);
     } catch (e) {
       console.error(`[declineTrade mutation] ${e}`);
 

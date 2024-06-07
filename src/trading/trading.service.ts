@@ -24,7 +24,9 @@ export class TradingService {
 
     return this.prismaService.tradeRequest.create({
       data: {
-        userId,
+        user: { connect: { id: userId } },
+        requested: { connect: { id: requestedId } },
+        offered: { connect: { id: offeredId } },
       },
     });
   }
@@ -74,5 +76,17 @@ export class TradingService {
     return this.prismaService.tradeRequest.count({
       where,
     });
+  }
+
+  /**
+   * Find one trade request.
+   *
+   * @param where the options to use to filter the search:
+   */
+  async findOne(
+    where: Prisma.TradeRequestWhereInput, 
+    include?: Prisma.TradeRequestInclude,
+  ) {
+    return this.prismaService.tradeRequest.findFirst({ where, include });
   }
 }
