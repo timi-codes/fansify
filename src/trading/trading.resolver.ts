@@ -16,25 +16,23 @@ import {
 
 import { AccessTokenGuard, RolesGuard } from '../auth/guards';
 import { PagedTradeRequestsModel, TradeRequestModel } from './models';
-import { UserService } from '../user';
 import { TradingService } from './trading.service';
 import { MembershipService } from '../membership';
 import { WalletService } from '../wallet';
 
 @ObjectType()
-class AcceptTradeSuccessResponse extends SuccessResponseModel<TradeRequest>(TradeRequestModel) { }
+class AcceptTradeSuccessResponse extends SuccessResponseModel(TradeRequestModel) { }
 
 @ObjectType()
-class DeclineTradeSuccessResponse extends SuccessResponseModel<TradeRequest>(TradeRequestModel) { }
+class DeclineTradeSuccessResponse extends SuccessResponseModel(TradeRequestModel) { }
 
 @ObjectType()
-class RequestTradeSuccessResponse extends SuccessResponseModel<TradeRequest>(TradeRequestModel) { }
+class RequestTradeSuccessResponse extends SuccessResponseModel(TradeRequestModel) { }
 
 
 @Resolver()
 export class TradingResolver {
   constructor(
-    private userService: UserService,
     private tradingService: TradingService,
     private membershipService: MembershipService,
     private walletService: WalletService,

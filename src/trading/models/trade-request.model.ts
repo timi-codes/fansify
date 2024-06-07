@@ -18,24 +18,12 @@ export class TradeRequestModel implements ITradeRequest {
     description: 'The date that the trade request was made.',
   })
   createdAt: Date;
-  @Field(() => MembershipModel, {
-    description: 'Data about the offered membership.',
-  })
+
     
   @Field(() => Date, {
     description: 'The date that the trade request was update.',
   })
   updatedAt: Date;
-
-  @Field(() => MembershipModel, {
-    description: 'Data about the offered membership.',
-  })
-  offered: IMembership;
-
-  // @Field(() => MembershipModel, {
-  //   description: 'Data about the requested membership.',
-  // })
-  // requested: IMembership;
 
   @Field(() => Int, {
     description: 'Data about the requested membership.',
@@ -54,7 +42,8 @@ export class TradeRequestModel implements ITradeRequest {
 
 
   @Field(() => String, {
+    nullable: true,
     description: 'The onchain transaction hash for token exchange.',
   })
-  trxHash: string;
+  trxHash?: string;
 }

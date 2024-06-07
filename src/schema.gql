@@ -132,9 +132,6 @@ type TradeRequestModel {
   """The date that the trade request was update."""
   updatedAt: Timestamp!
 
-  """Data about the offered membership."""
-  offered: MembershipModel!
-
   """Data about the requested membership."""
   userId: Int!
 
@@ -145,7 +142,7 @@ type TradeRequestModel {
   requestedId: Int!
 
   """The onchain transaction hash for token exchange."""
-  trxHash: String!
+  trxHash: String
 }
 
 enum TradeStatus {
