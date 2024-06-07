@@ -3,12 +3,10 @@ import { ethers } from 'ethers';
 import { EncryptionService } from '../encryption';
 import { ConfigService } from '@nestjs/config';
 import { UserService } from 'src/user';
-import { Prisma } from '@prisma/client';
 import { CreateMembershipInput } from 'src/membership/inputs';
-import { artifacts } from 'hardhat';
-import { Account, Chain, WalletClient, createWalletClient, encodePacked, getContract, http, parseAbi, publicActions } from 'viem';
+import { Account, Chain, WalletClient, createWalletClient, encodePacked, http, publicActions } from 'viem';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
-import { EthereumAddress, IWallet, MembershipWithInclude, MintReceipt, TokenExchangePayload } from 'src/common';
+import { EthereumAddress, IWallet, MembershipWithInclude, MintReceipt } from 'src/common';
 import { PrismaService } from 'src/prisma';
 import { localhost } from 'viem/chains';
 import { abi } from '../common/constants/WavesERC1155Token.json';
@@ -70,7 +68,6 @@ export class WalletService {
     public async mintWaves(creatorId: number, data: CreateMembershipInput): Promise<MintReceipt> {
         const contractAddress = this.configService.get<string>('WAVES_TOKEN_CONTRACT_ADDRESS');
         const contractDeployerPKDigest = this.configService.get<EthereumAddress>('CONTRACT_DEPLOYER_PK_DIGEST');
-        const artifact = await artifacts.readArtifact("WavesERC1155Token");
 
         const user = await this.userService.findOne({ id: creatorId });
 
@@ -87,7 +84,7 @@ export class WalletService {
 
         const trxHash = await this.client.writeContract({
             address: contractAddress as EthereumAddress,
-            abi: artifact.abi,
+            abi,
             functionName: 'mint',
             account: privateKeyToAccount(contractDeployerPKDigest),
             args: [user.walletAddress, encodedTokenID, data.quantity, encodedData],
