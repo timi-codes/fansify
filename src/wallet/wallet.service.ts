@@ -58,13 +58,6 @@ export class WalletService {
         }
     }
 
-    private async getWallet(privateKeyDigest: string): Promise<ethers.Wallet> {
-        const keyBuffer = Buffer.from(this.ENCRYPTION_KEY, 'hex');
-        const privateKey = this.encryptionService.decrypt(privateKeyDigest, keyBuffer);
-        const wallet = new ethers.Wallet(privateKey);
-        return wallet;
-    }
-
     public async mintWaves(creatorId: number, data: CreateMembershipInput): Promise<MintReceipt> {
         const contractAddress = this.configService.get<string>('WAVES_TOKEN_CONTRACT_ADDRESS');
         const contractDeployerPKDigest = this.configService.get<EthereumAddress>('CONTRACT_DEPLOYER_PK_DIGEST');
