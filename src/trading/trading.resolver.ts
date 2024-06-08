@@ -21,14 +21,7 @@ import { MembershipService } from '../membership';
 import { WalletService } from '../wallet';
 
 @ObjectType()
-class AcceptTradeSuccessResponse extends SuccessResponseModel(TradeRequestModel) { }
-
-@ObjectType()
-class DeclineTradeSuccessResponse extends SuccessResponseModel(TradeRequestModel) { }
-
-@ObjectType()
-class RequestTradeSuccessResponse extends SuccessResponseModel(TradeRequestModel) { }
-
+class TradeSuccessResponse extends SuccessResponseModel(TradeRequestModel) { }
 
 @Resolver()
 export class TradingResolver {
@@ -95,7 +88,7 @@ export class TradingResolver {
    *
    * @param user The user data object containing the current user's ID
    */
-  @Mutation(() => AcceptTradeSuccessResponse, {
+  @Mutation(() => TradeSuccessResponse, {
     description:
       'Accept the trade of owned membership with another user’s owned membership.',
   })
@@ -156,7 +149,7 @@ export class TradingResolver {
    *
    * @param user The user data object containing the current user's ID
    */
-  @Mutation(() => DeclineTradeSuccessResponse, {
+  @Mutation(() => TradeSuccessResponse, {
     description:
       'Decline the trade of owned membership with another user’s owned membership.',
   })
@@ -202,7 +195,7 @@ export class TradingResolver {
    *
    * @param user Request a trade for a membership
    */
-  @Mutation(() => RequestTradeSuccessResponse, {
+  @Mutation(() => TradeSuccessResponse, {
     description: 'Request a trade for a membership.',
   })
   @UseGuards(AccessTokenGuard, RolesGuard)

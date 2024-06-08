@@ -181,35 +181,7 @@ type MembershipSuccessResponse {
   data: [MembershipModel!]
 }
 
-type AcceptTradeSuccessResponse {
-  """The HTTP status of the response."""
-  statusCode: Int!
-
-  """Determines whether the server action was successful."""
-  isSuccess: Boolean!
-
-  """Contextual message describing what happened."""
-  message: String!
-
-  """Additional data returned from the server."""
-  data: TradeRequestModel
-}
-
-type DeclineTradeSuccessResponse {
-  """The HTTP status of the response."""
-  statusCode: Int!
-
-  """Determines whether the server action was successful."""
-  isSuccess: Boolean!
-
-  """Contextual message describing what happened."""
-  message: String!
-
-  """Additional data returned from the server."""
-  data: TradeRequestModel
-}
-
-type RequestTradeSuccessResponse {
+type TradeSuccessResponse {
   """The HTTP status of the response."""
   statusCode: Int!
 
@@ -289,7 +261,7 @@ type Mutation {
   acceptTrade(
     """The ID of the trade."""
     id: Int!
-  ): AcceptTradeSuccessResponse!
+  ): TradeSuccessResponse!
 
   """
   Decline the trade of owned membership with another user’s owned membership.
@@ -297,7 +269,7 @@ type Mutation {
   declineTrade(
     """The ID of the trade request."""
     id: Int!
-  ): DeclineTradeSuccessResponse!
+  ): TradeSuccessResponse!
 
   """Request a trade for a membership."""
   requestTrade(
@@ -306,7 +278,7 @@ type Mutation {
 
     """The ID of the membership that the user is offering to trade."""
     offeredId: Int!
-  ): RequestTradeSuccessResponse!
+  ): TradeSuccessResponse!
 
   """Create single or multiple memberships."""
   createMembership(payload: CreateMembershipInput!): MembershipSuccessResponse!

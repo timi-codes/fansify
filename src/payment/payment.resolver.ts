@@ -48,7 +48,6 @@ export class PaymentResolver {
         return createSuccessResponse(false, 'Membership not found or has been sold', HttpStatus.NOT_FOUND);
       }
 
-      console.log('membership', membership)
 
       const isWaveAvailable = await this.walletService.hasWave(membership.creator.walletAddress, membership.creatorId, membership.collectionTag);
       if (!isWaveAvailable) {

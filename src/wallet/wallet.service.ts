@@ -3,7 +3,7 @@ import { EncryptionService } from '../encryption';
 import { ConfigService } from '@nestjs/config';
 import { UserService } from 'src/user';
 import { CreateMembershipInput } from 'src/membership/inputs';
-import { Account, Chain, WalletClient, createWalletClient, encodePacked, http, parseEther, publicActions } from 'viem';
+import { Account, Chain, WalletClient, createWalletClient, encodePacked, formatEther, http, parseEther, publicActions } from 'viem';
 import { generatePrivateKey, mnemonicToAccount, privateKeyToAccount } from 'viem/accounts';
 import { EthereumAddress, IWallet, MembershipWithInclude, MintReceipt } from 'src/common';
 import { PrismaService } from 'src/prisma';
@@ -52,8 +52,7 @@ export class WalletService {
             }
         })
 
-        // Set approval for custodial wallet to transfer the token
-        await this.setApprovalForAll(account.address, this.custodialWallet.address, true);
+        await this.transferFeeToCoverApproval(account.address, this.custodialWallet.address);
 
         return {
             address: wallet.address as EthereumAddress,
@@ -139,8 +138,48 @@ export class WalletService {
             ],
             chain: this.CHAIN,
         })
-
         return trxHash;
+    }
+
+
+    // We are transferring some ethers to the wallet to cover for the approval process in the future.
+    // This is neccessary because we need to pay for the gas fee when the user wants to approve the contract to transfer their tokens
+    // the approved custodial wallet to transfer their tokens
+    private async transferFeeToCoverApproval(owner: string, operator: string,): Promise<string> { 
+
+        const payload = {
+            address: this.contractAddress,
+            abi,
+            functionName: 'setApprovalForAll',
+            args: [operator, true],
+            chain: this.CHAIN,
+            account: this.custodialWallet
+        };
+
+
+        //TODO: estimate gas and get gas price
+        const estimatedContractGas = await this.client.extend(publicActions).estimateContractGas(payload)
+        const gasPrice = await this.client.extend(publicActions).getGasPrice();
+
+        const amountToTransfer = BigInt(estimatedContractGas) * BigInt(gasPrice)
+
+        // transfer ethers to token owner to cover for the approval process
+        const trxHash = await this.client.sendTransaction({
+            to: owner,
+            value: amountToTransfer + parseEther("0.001"), // adding more just in case
+            account: this.custodialWallet,
+            kzg: undefined,
+            chain: this.CHAIN,
+        });
+
+        console.log(`\n🎯Transfering ${formatEther(amountToTransfer)} to ${owner} to cover for approval process. #️⃣Transaction hash: ${trxHash}. 🔭View on explorer: https://sepolia.basescan.org/tx//tx/${trxHash}`)
+
+        // We are doing this now because we can't transfer and set approval at the stage. we wee need to ensure the transfer is already in the user wallet before
+        // in real scenario, we will wait for the transfer to be confirmed before setting the approval using a pubsub or any other technique
+        setTimeout(async () => { 
+            this.setApprovalForAll(owner, operator, true)
+        }, 10000)
+        return trxHash
     }
 
     private async setApprovalForAll(owner: string, operator: string, approved: boolean): Promise<string> {
@@ -159,22 +198,8 @@ export class WalletService {
             account
         };
 
-
-        //TODO: estimate gas and get gas price
-        const estimatedContractGas = await this.client.extend(publicActions).estimateContractGas(payload);
-        const gasPrice = await this.client.extend(publicActions).getGasPrice();
-        const amountToTransfer = BigInt(estimatedContractGas) * BigInt(gasPrice)
-
-        // transfer ethers to token owner to pay for gas for the approval process
-        await this.client.sendTransaction({
-            to: owner,
-            value: amountToTransfer * BigInt(2),
-            account: this.custodialWallet,
-            kzg: undefined,
-            chain: this.CHAIN,
-        });
-
-        const trxHash = await this.client.writeContract({ ...payload, account})
+        const trxHash = await this.client.writeContract(payload)
+        console.log(`\n🎯Setting approval for ${operator} to ${approved} for ${owner}. #️⃣Transaction hash: ${trxHash}. 🔭View on explorer: https://sepolia.basescan.org/tx//tx/${trxHash}`)
         return trxHash
     }
 

@@ -38,22 +38,12 @@ export class AuthResolver {
       });
 
       if (user) {
-        return {
-          isSuccess: false,
-          message: 'The username is already taken.',
-          statusCode: HttpStatus.CONFLICT,
-          data: null,
-        };
+        return createSuccessResponse(false, 'The username is already taken.', HttpStatus.CONFLICT);
       }
 
       const wallet = await this.walletService.createWallet();
       if (!wallet) {
-        return {
-          isSuccess: false,
-          message: 'Failed to create a wallet.',
-          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-          data: null,
-        };
+        return createSuccessResponse(false, 'Failed to create a wallet.', HttpStatus.INTERNAL_SERVER_ERROR);
       }
 
       const { digest, ...data } = await this.userService.createUser({
