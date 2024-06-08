@@ -122,8 +122,8 @@ export class TradingResolver {
         return createSuccessResponse(false, 'You are not allowed to perform this action.', HttpStatus.UNAUTHORIZED)
       }
 
-      const trxHash = await this.walletService.exchangeWave(requested, offered)
-      if (!trxHash) {
+      const chainSummary = await this.walletService.exchangeWave(requested, offered)
+      if (!chainSummary.trxHash) {
         return createSuccessResponse(false, 'Failed to accept trade', HttpStatus.INTERNAL_SERVER_ERROR)
       }
 
@@ -132,13 +132,13 @@ export class TradingResolver {
         this.membershipService.update({ id: offered.id }, { owner: { connect: { id: requested.ownerId } } }),
       ])
 
-      const data = await this.tradingService.update({ id }, { status: TradeStatus.ACCEPTED, trxHash });
+      const data = await this.tradingService.update({ id }, { status: TradeStatus.ACCEPTED, trxHash: chainSummary.trxHash });
 
-      return createSuccessResponse(true, 'Trade request has been successfully accepted.', HttpStatus.OK, data);
+      return createSuccessResponse(true, 'Trade request has been successfully accepted.', HttpStatus.OK, data, chainSummary.message);
     
     } catch (e) {
       console.error(`[acceptTrade mutation] ${e}`);
-      return createSuccessResponse(false, 'Something weird happened. Please try again, and connect with us if it persists.', HttpStatus.INTERNAL_SERVER_ERROR)
+      return createSuccessResponse(false, `[acceptTrade mutation]${e}`, HttpStatus.INTERNAL_SERVER_ERROR)
     }
   }
 
@@ -165,9 +165,9 @@ export class TradingResolver {
   ): Promise<ISuccessResponse<TradeRequest>> {
 
     try {
-      const trade = await this.tradingService.findOne({ id }, { requested: true });
+      const trade = await this.tradingService.findOne({ id, status: TradeStatus.PENDING }, { requested: true });
       if (!trade) {
-        return createSuccessResponse(false, 'Trade request not found.', HttpStatus.NOT_FOUND)
+        return createSuccessResponse(false, 'Trade request not found or completed', HttpStatus.NOT_FOUND)
       }
 
       if (trade.status != TradeStatus.PENDING) {
@@ -220,6 +220,11 @@ export class TradingResolver {
 
       if (requestedId === offeredId) { 
         return createSuccessResponse(false, 'You cannot request a trade for the same membership.', HttpStatus.BAD_REQUEST)
+      }
+
+      const existingTrade = await this.tradingService.findOne({ requestedId, offeredId, userId: user.id, status: TradeStatus.PENDING });
+      if (existingTrade) {
+        return createSuccessResponse(false, 'Trade request already exists.', HttpStatus.BAD_REQUEST)
       }
 
       const [requestedMembership, offeredMembership] = await Promise.all([

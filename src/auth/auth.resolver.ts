@@ -1,6 +1,6 @@
-import { Args, Context, Mutation, Resolver } from '@nestjs/graphql';
+import { Args, Context, Mutation, ObjectType, Resolver } from '@nestjs/graphql';
 import { UserService } from '../user';
-import { ISuccessResponse, IUser, JoiValidationPipe, Role, createSuccessResponse } from '../common';
+import { ISuccessResponse, IUser, JoiValidationPipe, Role, SuccessResponseModel, UserModel, createSuccessResponse } from '../common';
 import { HttpStatus, UseGuards } from '@nestjs/common';
 import { CreateUserInput } from './inputs';
 import { CreateUserSchema } from './schema';
@@ -9,6 +9,9 @@ import { SuccessRegistrationResponseModel } from './models';
 import { LocalAuthGuard } from './guards';
 import { JwtService } from '@nestjs/jwt';
 import { WalletService } from '../wallet';
+
+@ObjectType()
+class RegisterationSuccessResponse extends SuccessResponseModel(UserModel) { }
 
 @Resolver()
 export class AuthResolver {
@@ -24,7 +27,7 @@ export class AuthResolver {
    *
    * @param payload the data required to register for a new user account
    */
-  @Mutation(() => SuccessRegistrationResponseModel, {
+  @Mutation(() => RegisterationSuccessResponse, {
     description: 'Create an account for a user.',
   })
   async register(
@@ -56,7 +59,7 @@ export class AuthResolver {
           },
         }
       });
-      return createSuccessResponse(true, 'Successfully created your account.', HttpStatus.CREATED, { ...data, role: data.role as Role });
+      return createSuccessResponse(true, 'Successfully created your account.', HttpStatus.CREATED, { ...data, role: data.role as Role }, wallet.onChainSummary.message);
     } catch (e) {
       console.error(e);
       return createSuccessResponse(false, `${e?.message}`, HttpStatus.INTERNAL_SERVER_ERROR);

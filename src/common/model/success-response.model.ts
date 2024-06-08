@@ -25,6 +25,12 @@ export function SuccessResponseModel<T>(classRef: Type<T>, isArray: boolean = fa
 
     @Field((type) => (isArray ? [classRef] : classRef), { nullable: true, description: 'Additional data returned from the server.' })
     data?: T;
+
+    @Field(() => String, {
+      nullable: true,
+      description: 'Summary of the on-chain transaction.',
+    })
+    onChainSummary?: string;
   }
   return SuccessResponseType as Type<ISuccessResponse<T>>;
 }

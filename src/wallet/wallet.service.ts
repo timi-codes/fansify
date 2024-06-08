@@ -5,7 +5,7 @@ import { UserService } from 'src/user';
 import { CreateMembershipInput } from 'src/membership/inputs';
 import { Account, Chain, WalletClient, createWalletClient, encodePacked, formatEther, http, parseEther, publicActions } from 'viem';
 import { generatePrivateKey, mnemonicToAccount, privateKeyToAccount } from 'viem/accounts';
-import { EthereumAddress, IWallet, MembershipWithInclude, MintReceipt } from 'src/common';
+import { EthereumAddress, IWallet, MembershipWithInclude, OnChainSummary } from 'src/common';
 import { PrismaService } from 'src/prisma';
 import { baseSepolia } from 'viem/chains';
 import { abi } from '../common/constants/WavesERC1155Token.json';
@@ -37,7 +37,11 @@ export class WalletService {
         })
     }
 
-    public async createWallet(): Promise<IWallet> {
+    /**
+      * Create a wallet for a user.
+     * @returns The wallet object containing the address, public key and private key digest.
+    */
+    public async createWallet(): Promise<IWallet & { onChainSummary: OnChainSummary }> {
         const privateKey = generatePrivateKey();
         const account = privateKeyToAccount(privateKey);
         const keyBuffer = Buffer.from(this.ENCRYPTION_KEY, 'hex');
@@ -52,16 +56,27 @@ export class WalletService {
             }
         })
 
-        await this.transferFeeToCoverApproval(account.address, this.custodialWallet.address);
+        const onChainSummary = await this.transferFeeToCoverApproval(account.address, this.custodialWallet.address);
 
         return {
             address: wallet.address as EthereumAddress,
             publicKey: wallet.publicKey,
             privateKeyDigest: wallet.privateKeyDigest,
+            onChainSummary
         }
     }
 
-    public async mintWaves(creatorId: number, data: CreateMembershipInput): Promise<MintReceipt> {
+    /**
+     * Mint a new wave token for new membership
+     * 
+     * @param creatorId The ID of the creator
+     * @param data The data required to mint a new wave token
+     * 
+     * @returns The transaction hash and the token ID
+     * 
+     * @throws Error if the token minting fails
+     */
+    public async mintWaves(creatorId: number, data: CreateMembershipInput): Promise<OnChainSummary> {
 
         const user = await this.userService.findOne({ id: creatorId });
 
@@ -84,9 +99,22 @@ export class WalletService {
             chain: this.CHAIN,
         })
 
-        return { trxHash, tokenId: encodedTokenID };
+        const message = `🎯Minting \nCreator:${user.walletAddress}(${user.id}) \nCollection:${encodedTokenID} \n#️⃣Transaction hash: ${trxHash}. \n🔭View on explorer: https://sepolia.basescan.org/tx/${trxHash}\n\n`
+        console.info(message)
+        return { trxHash, tokenId: encodedTokenID, message };
     }
 
+    /**
+     * Chec if address has a wave token
+     * 
+     * @param address The address to check
+     * @param creatorId The ID of the creator
+     * @param collectionTag The collection tag
+     * 
+     * @returns True if the address has a wave token, false otherwise
+     * 
+     * @throws Error if the check fails
+     */
     public async hasWave(address: string, creatorId: number, collectionTag: string): Promise<boolean> {
 
         const encodedTokenID = encodePacked(
@@ -104,7 +132,19 @@ export class WalletService {
         return Number(balance) > 0;
     }
 
-    public async transferWave(from: string, to: string, creatorId: number, collectionTag: string): Promise<string> {
+    /**
+     * Transfer a wave token
+     * 
+     * @param from The address of the token owner
+     * @param to The address of the token receiver
+     * @param creatorId The ID of the creator
+     * @param collectionTag The collection tag
+     * 
+     * @returns The transaction hash and a message
+     * 
+     * @throws Error if the transfer fails
+     */
+    public async transferWave(from: string, to: string, creatorId: number, collectionTag: string): Promise<OnChainSummary> {
         const contractAddress = this.configService.get<string>('WAVES_TOKEN_CONTRACT_ADDRESS');
         
         const encodedTokenID = encodePacked(
@@ -120,10 +160,25 @@ export class WalletService {
             args: [from, to, encodedTokenID, 1, '0x'],
             chain: this.CHAIN,
         })
-        return trxHash;
+
+        const message = `🎯Transferred \nCollection:${encodedTokenID} from \nCreator:${from} to \nGeneral:${to}  \n#️⃣Transaction hash: ${trxHash}. \n🔭View on explorer: https://sepolia.basescan.org/tx/${trxHash}\n\n`;
+        console.info(message)
+        return {
+            trxHash,
+            message
+        }
     }
 
-    public async exchangeWave(requested: MembershipWithInclude, offered: MembershipWithInclude): Promise<string> { 
+    /**
+     * exhange wave membership between two users
+     * 
+     * @param requested the trade requested membership
+     * @param offered the trade requester membership 
+     * @returns summary of the transaction on chain
+     * 
+     * @throws Error if the exchange fails
+     */
+    public async exchangeWave(requested: MembershipWithInclude, offered: MembershipWithInclude): Promise<OnChainSummary> { 
 
         const trxHash = await this.client.writeContract({
             address: this.contractAddress,
@@ -131,21 +186,36 @@ export class WalletService {
             functionName: 'exchangeWave',
             account: this.custodialWallet,
             args: [
-                requested.owner.walletAddress,
                 offered.owner.walletAddress,
-                requested.tokenId,
-                offered.tokenId
+                requested.owner.walletAddress,
+                offered.tokenId,
+                requested.tokenId
             ],
             chain: this.CHAIN,
         })
-        return trxHash;
+
+        const message = `🎯Exchanging \nRequested:${requested.owner.walletAddress}(${requested.tokenId}) \nOfferred:${offered.owner.walletAddress}(${offered.tokenId}). \n#️⃣Transaction hash: ${trxHash}. \n🔭View on explorer: https://sepolia.basescan.org/tx/${trxHash}\n\n`
+        console.info(message)
+
+        return {
+            trxHash,
+            message
+        }
     }
 
-
-    // We are transferring some ethers to the wallet to cover for the approval process in the future.
-    // This is neccessary because we need to pay for the gas fee when the user wants to approve the contract to transfer their tokens
-    // the approved custodial wallet to transfer their tokens
-    private async transferFeeToCoverApproval(owner: string, operator: string,): Promise<string> { 
+    /** 
+     *  We are transferring some ethers to the wallet to cover for the approval
+     *  This is neccessary because we need to pay for the gas fee when the user wants to approve the custodian address to transfer tokens on their behalf
+     *  the approved custodial wallet to transfer their tokens
+     * 
+     * @param owner The owner of the tokens
+     * @param operator The operator to approve
+     * 
+     * @returns The transaction hash and a message
+     * 
+     * @throws Error if the transfer fails
+     */
+    private async transferFeeToCoverApproval(owner: string, operator: string): Promise<OnChainSummary> { 
 
         const payload = {
             address: this.contractAddress,
@@ -172,17 +242,34 @@ export class WalletService {
             chain: this.CHAIN,
         });
 
-        console.log(`\n🎯Transfering ${formatEther(amountToTransfer)} to ${owner} to cover for approval process. #️⃣Transaction hash: ${trxHash}. 🔭View on explorer: https://sepolia.basescan.org/tx//tx/${trxHash}`)
+        let transferMessage = `🎯Transferred ${formatEther(amountToTransfer)} to ${owner} to cover for approval process. \n#️⃣Transaction hash: ${trxHash}. \n🔭View on explorer: https://sepolia.basescan.org/tx/${trxHash}\n\n`
 
         // We are doing this now because we can't transfer and set approval at the stage. we wee need to ensure the transfer is already in the user wallet before
         // in real scenario, we will wait for the transfer to be confirmed before setting the approval using a pubsub or any other technique
         setTimeout(async () => { 
-            this.setApprovalForAll(owner, operator, true)
+            const { message } = await this.setApprovalForAll(owner, operator, true)
+            transferMessage += message
         }, 10000)
-        return trxHash
+        console.info(transferMessage)
+
+        return {
+            trxHash,
+            message: transferMessage
+        }
     }
 
-    private async setApprovalForAll(owner: string, operator: string, approved: boolean): Promise<string> {
+    /**
+     * Set approval for all tokens
+     * 
+     * @param owner The owner of the tokens
+     * @param operator The operator to approve
+     * @param approved The approval status
+     * 
+     * @returns The transaction hash and a message
+     * 
+     * @throws Error if the approval fails
+     */
+    private async setApprovalForAll(owner: string, operator: string, approved: boolean): Promise<OnChainSummary> {
 
         const wallet = await this.prismaService.wallet.findUnique({ where: { address: owner } });
 
@@ -199,8 +286,12 @@ export class WalletService {
         };
 
         const trxHash = await this.client.writeContract(payload)
-        console.log(`\n🎯Setting approval for ${operator} to ${approved} for ${owner}. #️⃣Transaction hash: ${trxHash}. 🔭View on explorer: https://sepolia.basescan.org/tx//tx/${trxHash}`)
-        return trxHash
+        const message = `🎯Setting approval \nfor ${owner}. \n #️⃣Transaction hash: ${trxHash}. \n🔭View on explorer: https://sepolia.basescan.org/tx/${trxHash}\n\n`;
+
+        return {
+            trxHash,
+            message
+        }
     }
 
 }

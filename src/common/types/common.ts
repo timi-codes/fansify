@@ -44,14 +44,15 @@ const membershipWithInclude = Prisma.validator<Prisma.MembershipDefaultArgs>()({
 });
 export type MembershipWithInclude = Prisma.MembershipGetPayload<typeof membershipWithInclude>;
 
-
-export interface MintReceipt { 
-    trxHash: string;
-    tokenId: string;
-}
 export interface TokenExchangePayload {
     requesterAddress: string,
     responderAddress: string,
     requestedTokenId: string,
     offerredTokenId: string,
+}
+
+export interface OnChainSummary {
+    trxHash: string;
+    tokenId?: string;
+    message: string;
 }

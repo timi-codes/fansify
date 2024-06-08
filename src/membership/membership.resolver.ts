@@ -44,7 +44,7 @@ export class MembershipResolver {
                 return createSuccessResponse(false, 'Failed to mint membership', HttpStatus.INTERNAL_SERVER_ERROR);
             }
             const memberships = await this.membershipService.createMany(payload, creator.id, mintReceipt)
-            return createSuccessResponse(true, 'Membership created successfully', HttpStatus.CREATED, memberships);
+            return createSuccessResponse(true, 'Membership created successfully', HttpStatus.CREATED, memberships, mintReceipt.message);
 
         } catch (e) {
             return createSuccessResponse(false, `[createMembership mutation] ${e}`, HttpStatus.INTERNAL_SERVER_ERROR);

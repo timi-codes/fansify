@@ -28,10 +28,7 @@ type UserModel {
 """
 scalar Timestamp
 
-"""
-A response model, containing the state of the response from the server.
-"""
-type SuccessRegistrationResponseModel {
+type RegisterationSuccessResponse {
   """The HTTP status of the response."""
   statusCode: Int!
 
@@ -41,8 +38,11 @@ type SuccessRegistrationResponseModel {
   """Contextual message describing what happened."""
   message: String!
 
-  """The new user."""
+  """Additional data returned from the server."""
   data: UserModel
+
+  """Summary of the on-chain transaction."""
+  onChainSummary: String
 }
 
 """A data model representing a membership"""
@@ -116,6 +116,9 @@ type SuccessResponse {
 
   """Additional data returned from the server."""
   data: MembershipModel
+
+  """Summary of the on-chain transaction."""
+  onChainSummary: String
 }
 
 """"""
@@ -179,6 +182,9 @@ type MembershipSuccessResponse {
 
   """Additional data returned from the server."""
   data: [MembershipModel!]
+
+  """Summary of the on-chain transaction."""
+  onChainSummary: String
 }
 
 type TradeSuccessResponse {
@@ -193,6 +199,9 @@ type TradeSuccessResponse {
 
   """Additional data returned from the server."""
   data: TradeRequestModel
+
+  """Summary of the on-chain transaction."""
+  onChainSummary: String
 }
 
 type Query {
@@ -238,7 +247,7 @@ type Query {
 
 type Mutation {
   """Create an account for a user."""
-  register(payload: CreateUserInput!): SuccessRegistrationResponseModel!
+  register(payload: CreateUserInput!): RegisterationSuccessResponse!
 
   """Verify the user credentials and receive an access token."""
   login(

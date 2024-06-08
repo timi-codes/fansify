@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma';
 import { Prisma, Membership } from '@prisma/client';
 import { CreateMembershipInput } from './inputs';
-import { IPaginationOptions, MembershipWithInclude, MintReceipt } from 'src/common';
+import { IPaginationOptions, MembershipWithInclude, OnChainSummary } from 'src/common';
 
 @Injectable()
 export class MembershipService {
@@ -18,7 +18,7 @@ export class MembershipService {
      * 
      * @throws an error if the membership record could not be created
     */
-    async createMany(data: CreateMembershipInput, creatorId: number, mintReceipt: MintReceipt): Promise<Membership[]> { 
+    async createMany(data: CreateMembershipInput, creatorId: number, mintReceipt: OnChainSummary): Promise<Membership[]> { 
         return Promise.all(Array.from({ length: data.quantity }, async (_, id) => {
             const { quantity, ...membership } = data;
             return this.prismaService.membership.create({

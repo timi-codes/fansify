@@ -56,9 +56,9 @@ export class PaymentResolver {
 
       const user = await this.userService.findOne({ id: currentUser.id });
 
-      const trxHash = await this.walletService.transferWave(membership.creator.walletAddress, user.walletAddress, membership.creatorId, membership.collectionTag);
+      const onChainSummary = await this.walletService.transferWave(membership.creator.walletAddress, user.walletAddress, membership.creatorId, membership.collectionTag);
 
-      if (!trxHash) {
+      if (!onChainSummary.trxHash) {
         return createSuccessResponse(false, 'Failed to buy membership', HttpStatus.INTERNAL_SERVER_ERROR);
       }
 
@@ -67,7 +67,7 @@ export class PaymentResolver {
         status: MembershipStatus.SOLD
       });
       
-      return createSuccessResponse(true, 'Membership bought successfully', HttpStatus.OK, updatedMembership);
+      return createSuccessResponse(true, 'Membership bought successfully', HttpStatus.OK, updatedMembership, onChainSummary.message);
 
     } catch (e) {
       console.error(`[buyMemberships query] ${e}`);

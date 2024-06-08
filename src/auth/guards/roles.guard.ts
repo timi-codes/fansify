@@ -24,11 +24,11 @@ export class RolesGuard implements CanActivate {
         const user = request.req.user;
         if (role != user.role) {
             throw new GraphQLException(
-                'User does have the right role to access this resource.',
+                'User doesn not have the right role to access this resource.',
                 {
                     extensions: {
                         http: {
-                            status: HttpStatus.NOT_FOUND,
+                            status: HttpStatus.FORBIDDEN,
                         },
                     },
                 },

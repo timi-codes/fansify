@@ -5,6 +5,7 @@ export interface ISuccessResponse<T = any> {
   message: string;
   statusCode?: HttpStatus;
   data?: T;
+  onChainSummary?: string
 }
 
 export function createSuccessResponse<T>(
@@ -12,6 +13,7 @@ export function createSuccessResponse<T>(
   message: string,
   statusCode?: HttpStatus,
   data?: T,
+  onChainSummary?: string
 ): ISuccessResponse<T> {
-  return { isSuccess, message, data, statusCode };
+  return { isSuccess, message, data, statusCode, onChainSummary };
 }
