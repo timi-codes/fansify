@@ -1,6 +1,6 @@
 import { Args, Context, Mutation, Resolver } from '@nestjs/graphql';
 import { UserService } from '../user';
-import { ISuccessResponse, IUser, JoiValidationPipe, Role } from '../common';
+import { ISuccessResponse, IUser, JoiValidationPipe, Role, createSuccessResponse } from '../common';
 import { HttpStatus, UseGuards } from '@nestjs/common';
 import { CreateUserInput } from './inputs';
 import { CreateUserSchema } from './schema';
@@ -66,22 +66,10 @@ export class AuthResolver {
           },
         }
       });
-
-      return {
-        isSuccess: true,
-        message: 'Successfully created your account.',
-        statusCode: HttpStatus.CREATED,
-        data: { ...data, role: data.role as Role },
-      };
+      return createSuccessResponse(true, 'Successfully created your account.', HttpStatus.CREATED, { ...data, role: data.role as Role });
     } catch (e) {
       console.error(e);
-
-      return {
-        isSuccess: false,
-        message: 'Something awful happened. Please try again later.',
-        statusCode: HttpStatus.OK,
-        data: null,
-      };
+      return createSuccessResponse(false, `${e?.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 

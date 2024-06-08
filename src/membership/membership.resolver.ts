@@ -10,7 +10,7 @@ import { Membership } from '@prisma/client';
 import { MembershipModel, PagedMembershipsModel } from './model';
 
 @ObjectType()
-class MembershipSuccessResponse extends SuccessResponseModel<Membership>(MembershipModel) { }
+class MembershipSuccessResponse extends SuccessResponseModel(MembershipModel, true) { }
 
 @Resolver()
 export class MembershipResolver {
@@ -47,8 +47,7 @@ export class MembershipResolver {
             return createSuccessResponse(true, 'Membership created successfully', HttpStatus.CREATED, memberships);
 
         } catch (e) {
-            console.error(`[createMembership mutation] ${e}`);
-            return createSuccessResponse(false, 'Failed to create membership', HttpStatus.INTERNAL_SERVER_ERROR);
+            return createSuccessResponse(false, `[createMembership mutation] ${e}`, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 

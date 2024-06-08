@@ -178,7 +178,7 @@ type MembershipSuccessResponse {
   message: String!
 
   """Additional data returned from the server."""
-  data: MembershipModel
+  data: [MembershipModel!]
 }
 
 type AcceptTradeSuccessResponse {

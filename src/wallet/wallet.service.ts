@@ -1,14 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import { ethers } from 'ethers';
 import { EncryptionService } from '../encryption';
 import { ConfigService } from '@nestjs/config';
 import { UserService } from 'src/user';
 import { CreateMembershipInput } from 'src/membership/inputs';
-import { Account, Chain, WalletClient, createWalletClient, encodePacked, http, publicActions } from 'viem';
+import { Account, Chain, WalletClient, createWalletClient, encodePacked, http, parseEther, publicActions } from 'viem';
 import { generatePrivateKey, mnemonicToAccount, privateKeyToAccount } from 'viem/accounts';
 import { EthereumAddress, IWallet, MembershipWithInclude, MintReceipt } from 'src/common';
 import { PrismaService } from 'src/prisma';
-import { localhost } from 'viem/chains';
+import { baseSepolia } from 'viem/chains';
 import { abi } from '../common/constants/WavesERC1155Token.json';
 
 @Injectable()
@@ -27,13 +26,13 @@ export class WalletService {
     ) {
         this.contractAddress = this.configService.get<EthereumAddress>('WAVES_TOKEN_CONTRACT_ADDRESS');
         this.ENCRYPTION_KEY = this.configService.get<string>('ENCRYPTION_KEY');
-        this.CHAIN = { ...localhost, id: 31337 }
+        this.CHAIN = baseSepolia as Chain;
 
         const contractDeployerPK = this.configService.get<EthereumAddress>('CONTRACT_DEPLOYER_MNEMONIC');
         this.custodialWallet = mnemonicToAccount(contractDeployerPK)
 
         this.client = createWalletClient({
-            chain: localhost,
+            chain: this.CHAIN,
             transport: http(),
         })
     }
@@ -44,7 +43,7 @@ export class WalletService {
         const keyBuffer = Buffer.from(this.ENCRYPTION_KEY, 'hex');
        
         const privateKeyDigest = this.encryptionService.encrypt(privateKey, keyBuffer);
-        console.log(privateKey , privateKeyDigest, account.address)
+
         const wallet = await this.prismaService.wallet.create({
             data: {
                 address: account.address as EthereumAddress,
@@ -52,6 +51,9 @@ export class WalletService {
                 privateKeyDigest,
             }
         })
+
+        // Set approval for custodial wallet to transfer the token
+        await this.setApprovalForAll(account.address, this.custodialWallet.address, true);
 
         return {
             address: wallet.address as EthereumAddress,
@@ -68,7 +70,6 @@ export class WalletService {
             ['string', 'string'],
             [data.collectionTag, user.id.toString()]
         );
-        console.log('encodedTokenID', encodedTokenID, data.collectionTag, user.id.toString())
 
         const encodedData = encodePacked(
             ['string', 'string', 'string', 'string', 'string'],
@@ -83,9 +84,6 @@ export class WalletService {
             args: [user.walletAddress, encodedTokenID, data.quantity, encodedData],
             chain: this.CHAIN,
         })
-        console.log("==>", trxHash)
-        // Set approval for custodial wallet to transfer the token
-        await this.setApprovalForAll(user.walletAddress, this.custodialWallet.address, true);
 
         return { trxHash, tokenId: encodedTokenID };
     }
@@ -97,14 +95,13 @@ export class WalletService {
             [collectionTag, creatorId.toString()]
         );
 
-        console.log('encodedTokenID', encodedTokenID, collectionTag, creatorId.toString())
         const balance = await this.client.extend(publicActions).readContract({
             abi,
             address: this.contractAddress,
             functionName: 'balanceOf',
             args: [address, encodedTokenID],
         }) as number;
-        console.log('balance', balance)
+
         return Number(balance) > 0;
     }
 
@@ -128,7 +125,7 @@ export class WalletService {
     }
 
     public async exchangeWave(requested: MembershipWithInclude, offered: MembershipWithInclude): Promise<string> { 
-        console.log('exchangeWave', requested, offered)
+
         const trxHash = await this.client.writeContract({
             address: this.contractAddress,
             abi,
@@ -157,25 +154,27 @@ export class WalletService {
             address: this.contractAddress,
             abi,
             functionName: 'setApprovalForAll',
-            account,
             args: [operator, approved],
             chain: this.CHAIN,
+            account
         };
 
-        const estimatedGas = await this.client.extend(publicActions).estimateContractGas(payload);
-        const estimatedGasInWei = BigInt(estimatedGas) * BigInt(10 ** 9);
 
-        // transfer ethers to token owner to pay for gas for the transaction
+        //TODO: estimate gas and get gas price
+        const estimatedContractGas = await this.client.extend(publicActions).estimateContractGas(payload);
+        const gasPrice = await this.client.extend(publicActions).getGasPrice();
+        const amountToTransfer = BigInt(estimatedContractGas) * BigInt(gasPrice)
+
+        // transfer ethers to token owner to pay for gas for the approval process
         await this.client.sendTransaction({
             to: owner,
-            value: estimatedGasInWei,
+            value: amountToTransfer * BigInt(2),
             account: this.custodialWallet,
             kzg: undefined,
             chain: this.CHAIN,
         });
-        
 
-        const trxHash = await this.client.writeContract(payload)
+        const trxHash = await this.client.writeContract({ ...payload, account})
         return trxHash
     }
 

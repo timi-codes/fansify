@@ -1,9 +1,10 @@
-import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, HttpStatus } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { Roles } from '../../common/decorators';
 import { Reflector } from '@nestjs/core';
 import { Role } from 'src/common';
 import { GqlExecutionContext } from '@nestjs/graphql';
+import { GraphQLException } from '@nestjs/graphql/dist/exceptions';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -21,6 +22,18 @@ export class RolesGuard implements CanActivate {
 
         const request = ctx.getContext();
         const user = request.req.user;
-        return role === user.role;
+        if (role != user.role) {
+            throw new GraphQLException(
+                'User does have the right role to access this resource.',
+                {
+                    extensions: {
+                        http: {
+                            status: HttpStatus.NOT_FOUND,
+                        },
+                    },
+                },
+            );
+        }
+        return true
     }
 }

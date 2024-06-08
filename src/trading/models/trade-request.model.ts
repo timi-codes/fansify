@@ -1,6 +1,4 @@
 import { Field, Int, ObjectType } from '@nestjs/graphql';
-import { IMembership } from '../../membership/types';
-import { MembershipModel } from '../../membership/model';
 import { ITradeRequest } from '../types';
 import { TradeStatus } from 'src/common';
 
