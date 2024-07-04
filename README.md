@@ -101,4 +101,4 @@ Deploy smart contract
 
 # Contributors
 
-- [Tak](https://github.com/takumhonde9)
+- [David Tejumola](https://github.com/timi-codes)
